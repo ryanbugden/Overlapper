@@ -1,13 +1,8 @@
-from AppKit import NSApp, NSColor, NSTextAlignmentRight, NSTextAlignmentLeft
 from AppKit import NSImage
-from fontTools.ufoLib.pointPen import AbstractPointPen
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
-from lib.UI.toolbarGlyphTools import ToolbarGlyphTools
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
-from mojo.UI import CurrentGlyphWindow, CurrentWindow, getDefault
-import mojo.drawingTools as dt
+from mojo.UI import CurrentWindow
 import math
-import os
 import re
 import merz
 from merz.tools.drawingTools import NSImageDrawingTools
@@ -76,7 +71,6 @@ def myRound(x, base=1):
 
 class Overlapper(Subscriber):
 
-    base_path = os.path.dirname(__file__)
     toolValue = 0
 
     def build(self):
