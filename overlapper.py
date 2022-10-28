@@ -1,13 +1,9 @@
-from AppKit import NSImage
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
-from mojo.UI import CurrentWindow
+from mojo.UI import CurrentWindow, getDefault
 import math
-import re
 import merz
-from merz.tools.drawingTools import NSImageDrawingTools
 import time
-
 
 '''
 This was adapted from the Add Overlap extension by Alexandre Saumier Demers.
@@ -26,21 +22,20 @@ Ryan Bugden
 2022.03.18
 '''
 
-
-# testing method from Jackson; add @timeit before methods to test
-def timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-        if 'log_time' in kw:
-            name = kw.get('log_name', method.__name__.upper())
-            kw['log_time'][name] = int((te - ts) * 1000)
-        else:
-            # print('%r  %2.2f ms' %(method.__name__, (te - ts) * 1000))
-            pass
-        return result
-    return timed
+# # testing method from Jackson; add @timeit before methods to test
+# def timeit(method):
+#     def timed(*args, **kw):
+#         ts = time.time()
+#         result = method(*args, **kw)
+#         te = time.time()
+#         if 'log_time' in kw:
+#             name = kw.get('log_name', method.__name__.upper())
+#             kw['log_time'][name] = int((te - ts) * 1000)
+#         else:
+#             # print('%r  %2.2f ms' %(method.__name__, (te - ts) * 1000))
+#             pass
+#         return result
+#     return timed
 
 
 def lengthenLine(pt1, pt2, factor, direction="out"):
@@ -55,7 +50,7 @@ def lengthenLine(pt1, pt2, factor, direction="out"):
         return ((new_x, new_y), (x2, y2))
 
 
-def vectorDistance(pt1, pt2):
+def getVectorDistance(pt1, pt2):
     x1, y1, x2, y2 = pt1.x, pt1.y, pt2.x, pt2.y
     dist = math.sqrt((x2-x1)**2 + (y2-y1)**2)
 
@@ -146,7 +141,7 @@ class Overlapper(Subscriber):
                         else:
                             onC_here = seg.points[0]
                             sel_hubs.update({(onC_here.x, onC_here.y): {"in": [onC_before, onC_here]}})
-                            in_dist = vectorDistance(onC_here, onC_before)
+                            in_dist = getVectorDistance(onC_here, onC_before)
                             # # print("line in_dist", in_dist)
                         
                         
@@ -167,7 +162,7 @@ class Overlapper(Subscriber):
                             # # print("arc out_dist", out_dist)
                         else:
                             sel_hubs[(onC_here.x, onC_here.y)].update({"out": [onC_here, onC_after]})
-                            out_dist = vectorDistance(onC_here, onC_after)
+                            out_dist = getVectorDistance(onC_here, onC_after)
                             # # print("line out_dist", out_dist)
 
                         in_factor = (float(offset) + float(in_dist)) / float(in_dist)
@@ -177,6 +172,9 @@ class Overlapper(Subscriber):
                         # print("out_factor", out_factor)
                         # print("sel_hubs", sel_hubs)
                         
+
+                        # ---- start building output
+
                         key = (onC_here.x, onC_here.y)
                         _in = sel_hubs[key]["in"]
                         _out = sel_hubs[key]["out"]
@@ -337,9 +335,10 @@ class Overlapper(Subscriber):
                     else:
                         # print("4")
                         pass
-                    # should all do this ???:  next_seg.onCurve.x, y??
+                    # should all do this ???:  next_seg.onCurve.x, y?? THIS MIGHT NOT BE NECESSARY, because it's just describing the next point
                     next_x, next_y = out_result[(x, y)][-1][0], out_result[(x, y)][-1][1]
 
+                    # you just went through and added another point, so prepare to bump up the index one more than previously assumed
                     hits += 1
 
         return self.hold_g
