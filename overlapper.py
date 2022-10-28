@@ -1,11 +1,9 @@
 from AppKit import NSApp, NSColor, NSTextAlignmentRight, NSTextAlignmentLeft
-from vanilla import EditText, TextBox, Window, Button, Slider
 from AppKit import NSImage
 from fontTools.ufoLib.pointPen import AbstractPointPen
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from lib.UI.toolbarGlyphTools import ToolbarGlyphTools
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
-from mojo.extensions import setExtensionDefault, getExtensionDefault, registerExtensionDefaults, removeExtensionDefault
 from mojo.UI import CurrentGlyphWindow, CurrentWindow, getDefault
 import mojo.drawingTools as dt
 import math
@@ -14,6 +12,24 @@ import re
 import merz
 from merz.tools.drawingTools import NSImageDrawingTools
 import time
+
+
+'''
+This was adapted from the Add Overlap extension by Alexandre Saumier Demers.
+
+Thank you for the advice:
+- Frank Griesshammer
+- Jackson Cavanaugh
+- Andy Clymer
+
+Next steps:
+- Speed it up. Only focus on specific segments as opposed to the whole glyph?
+- Keep the "Overlapping" message on the same X it was when mouseDown
+
+Ryan Bugden
+2022.10.28
+2022.03.18
+'''
 
 
 # testing method from Jackson; add @timeit before methods to test
@@ -65,14 +81,7 @@ class Overlapper(Subscriber):
 
     def build(self):
 
-        # self.prefKey = 'com.ryanbugden.addOverlap'
-        # initialDefaults = {
-        #     self.pref:   '-30',
-        #     }
         self.stored_pts = None
-        # registerExtensionDefaults(initialDefaults)
-        # self.toolValue = getExtensionDefault(self.pref)
-        
         self.v = False
         self.initialX = None
         self.initialY = None
@@ -80,10 +89,9 @@ class Overlapper(Subscriber):
         self.ready_to_go = False
         self.mod_active = False
         
-        
         self.glyph_editor = self.getGlyphEditor()
         self.bg_container = self.glyph_editor.extensionContainer(
-            identifier="addOverlap.foreground", 
+            identifier="Overlapper.foreground", 
             location="foreground", 
             clear=True
             )
@@ -97,7 +105,7 @@ class Overlapper(Subscriber):
         self.info = self.bg_container.appendTextLineSublayer(
             position=(100, 100),
             size=(400, 100),
-            text="Adding overlap",
+            text="Overlapping",
             fillColor=(0, 0, 0, 1),
             horizontalAlignment="center",
             pointSize=12,
@@ -105,8 +113,6 @@ class Overlapper(Subscriber):
             weight="bold",
             offset=(0,-50)
             )
-
-
 
 
     # @timeit
@@ -212,6 +218,9 @@ class Overlapper(Subscriber):
 
     # @timeit
     def glyphEditorDidKeyDown(self, info):
+
+        # print("glyphEditorDidKeyDown", info)
+
         char = info['deviceState']['keyDownWithoutModifiers']
         if char == "v" and self.mod_active == False:
             self.v = True
@@ -240,6 +249,8 @@ class Overlapper(Subscriber):
             self.info.setVisible(False)
             self.stroked_preview.setVisible(False)
 
+            self.ready_for_init = True
+
 
     def glyphEditorDidChangeModifiers(self, info):
 
@@ -250,6 +261,7 @@ class Overlapper(Subscriber):
             if value > 0:
                 self.mod_active = True
                 break
+
 
     glyphEditorDidMouseMoveDelay = 0
     def glyphEditorDidMouseMove(self, info):
@@ -269,7 +281,7 @@ class Overlapper(Subscriber):
 
             # draw info
             self.info.setVisible(True)
-            self.info.setText(f"← Adding overlap → {self.toolValue}")
+            self.info.setText(f"← Overlapping → {self.toolValue}")
             self.info.setPosition((x, y))
             
 
@@ -342,7 +354,7 @@ class Overlapper(Subscriber):
     # @timeit
     def overlapIt(self):
 
-        with self.g.undo("Add Overlap"):
+        with self.g.undo("Overlap"):
             self.g.clear()
             self.g.appendGlyph(self.hold_g)
 
@@ -354,38 +366,14 @@ class Overlapper(Subscriber):
                         
             self.g.changed()
 
-    # @property
-    # def pref(self):
-    #     return self.prefKey + '.' + 'addOverlapValue'
-
-    # def prefSave(self, sender):
-    #     setExtensionDefault(self.prefKey+'.addOverlapValue', self.w.t.get())
-    #     v = getExtensionDefault(self.pref)
-
-    # def prefGet(self, sender):
-    #     v = getExtensionDefault(self.pref)
-
-    # @property
-    # def wwwindow(self):
-    #     return CurrentGlyphWindow()
-
-
-    # def onlynumbers(self, v):
-    #     v = v.replace(' ', '')
-    #     if v == None or v == '': 
-    #         v = '0'
-    #     if v == '-0': 
-    #         v = '0'
-    #     negpos = ''
-    #     if v[0] and v[0] == '-' and v != '0':
-    #         negpos = '-'
-    #     v = negpos + re.sub(r'[-\D]', '', v)
-    #     return v
 
     def roboFontDidSwitchCurrentGlyph(self, info):
         self.window = CurrentWindow()
 
-#===================
+
+
+# ======================================================================================
         
 if __name__ == "__main__":    
     registerGlyphEditorSubscriber(Overlapper)
+
