@@ -1,4 +1,5 @@
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
+from fontTools.ufoLib.pointPen import PointToSegmentPen # for Frank’s code setting start points to on-curves
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
 from mojo.UI import CurrentWindow, getDefault
 import math
@@ -7,6 +8,7 @@ import time
 
 '''
 This was adapted from the Add Overlap extension by Alexandre Saumier Demers.
+Warning: fixes start point in the process.
 
 Thank you for the advice:
 - Frank Griesshammer
@@ -70,6 +72,8 @@ class Overlapper(Subscriber):
 
     def build(self):
 
+        self.allow_redraw = True
+
         self.stored_pts = None
         self.v = False
         self.initialX = None
@@ -102,6 +106,51 @@ class Overlapper(Subscriber):
             weight="bold",
             offset=(0,-50)
             )
+
+
+    def redraw_glyph(self,g):
+        '''
+        re-draw glyph so point index 0 never is an offcurve
+        '''
+        contours = []
+
+        for contour in g.contours:
+            points = [p for p in contour.points]
+            while points[0].type == 'offcurve':
+                points.append(points.pop(0))
+            contours.append(points)
+
+        with g.undo('redraw'):
+            rg = RGlyph()
+            ppen = PointToSegmentPen(rg.getPen())
+
+            sels = []
+            for contour in contours:
+                ppen.beginPath()
+                for point in contour:
+                    if point.type == 'offcurve':
+                        ptype = None
+                    else:
+                        ptype = point.type
+                        if point.selected == True:
+                            # print("appended selected point!")
+                            sels.append(point)
+                    ppen.addPoint((point.x, point.y), ptype)
+                ppen.endPath()
+
+            g.clearContours()
+            g.appendGlyph(rg)
+
+            for c in g.contours:
+                for pt in c.points:
+                    # print("looking at pt:", pt)
+                    for sel_pt in sels:
+                        # this is messy. I'm trying to never deselect the selected points, but this attempts to get it back by looking at pt.type and coordinates. hacky.
+                        if pt.type == sel_pt.type and (pt.x, pt.y) == (sel_pt.x, sel_pt.y):
+                            pt.selected = True
+                            # print("selected it!")
+
+            # g.changed() # causes a bit of lag? I may not need this
 
 
     # @timeit
@@ -213,6 +262,24 @@ class Overlapper(Subscriber):
 
         # print("glyphEditorDidKeyDown", info)
 
+        # before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
+        if self.allow_redraw == True:
+            g = CurrentGlyph()
+            hold_sel = g.selectedPoints
+            for contour in g.contours:
+                first_point = contour.points[0]
+                first_bPoint = contour.bPoints[0]
+                first_point_coords = (first_point.x, first_point.y)
+                if first_point_coords != first_bPoint.anchor:
+                    print(
+                        'fixing off-curve start point in '
+                        f'{g.name}, ({g.font.info.styleName})'
+                    )
+                    self.redraw_glyph(g)
+
+            # only do this once at the beginning
+            self.allow_redraw  = False
+
         char = info['deviceState']['keyDownWithoutModifiers']
         if char == "v" and self.mod_active == False:
             self.v = True
@@ -242,6 +309,7 @@ class Overlapper(Subscriber):
             self.stroked_preview.setVisible(False)
 
             self.ready_for_init = True
+            self.allow_redraw  = True
 
 
     def glyphEditorDidChangeModifiers(self, info):
@@ -281,6 +349,18 @@ class Overlapper(Subscriber):
     def drawOverlapPreview(self):
 
         outline = self.getOverlappedGlyph()
+
+        ## debug
+        # for c_i in range(len(outline.contours)):
+        #     c = outline.contours[c_i]
+        #     for seg in c.segments:
+        #         # print(len(seg))
+        #         if len(seg) == 2:
+        #             # print("WHOA BUDDY! look at contour index:", c_i)
+        #             # print("seg.onCurve, seg.offCurve", seg.onCurve, seg.offCurve)
+        #             for pt in seg.points:
+        #                 # print(pt, pt.type, pt.index)
+
         glyph_path = outline.getRepresentation("merz.CGPath")
         self.stroked_preview.setPath(glyph_path)
 
@@ -323,13 +403,15 @@ class Overlapper(Subscriber):
                         # print("2")
                         c.insertSegment(i + 1 + hits, type="line", points=[out_result[(x, y)][0]], smooth=False)
                         try:
+                            # print("2a")
                             next_seg = c.segments[i + 2 + hits]
                         except IndexError:
+                            # print("2b")
                             next_seg = c.segments[0]
 
                     # onto the next segment, change the point positions                 
                     if len(next_seg.points) == 3:
-                        # print("3")
+                        # print("3", "len(seg), len(next_seg)", len(seg), len(next_seg))
                         next_seg.offCurve[0].x, next_seg.offCurve[0].y = out_result[(x, y)][-3][0], out_result[(x, y)][-3][1]
                         next_seg.offCurve[1].x, next_seg.offCurve[1].y = out_result[(x, y)][-2][0], out_result[(x, y)][-2][1]
                     else:
@@ -337,6 +419,7 @@ class Overlapper(Subscriber):
                         pass
                     # should all do this ???:  next_seg.onCurve.x, y?? THIS MIGHT NOT BE NECESSARY, because it's just describing the next point
                     next_x, next_y = out_result[(x, y)][-1][0], out_result[(x, y)][-1][1]
+                    # print("5", "len(seg), len(next_seg)", len(seg), len(next_seg))
 
                     # you just went through and added another point, so prepare to bump up the index one more than previously assumed
                     hits += 1
@@ -348,16 +431,19 @@ class Overlapper(Subscriber):
     def overlapIt(self):
 
         with self.g.undo("Overlap"):
-            self.g.clear()
-            self.g.appendGlyph(self.hold_g)
+            try:
+                self.g.clear()
+                self.g.appendGlyph(self.hold_g)
 
-            snap = getDefault("glyphViewRoundValues")
-            if snap != 0:
-                for c in self.g.contours:
-                    for pt in c.points:
-                        pt.x, pt.y = myRound(pt.x, snap), myRound(pt.y,  snap)
-                        
-            self.g.changed()
+                snap = getDefault("glyphViewRoundValues")
+                if snap != 0:
+                    for c in self.g.contours:
+                        for pt in c.points:
+                            pt.x, pt.y = myRound(pt.x, snap), myRound(pt.y,  snap)
+                            
+                self.g.changed()
+            except:
+                pass
 
 
     def roboFontDidSwitchCurrentGlyph(self, info):
