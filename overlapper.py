@@ -108,49 +108,73 @@ class Overlapper(Subscriber):
             )
 
 
-    def redraw_glyph(self,g):
-        '''
-        re-draw glyph so point index 0 never is an offcurve
-        '''
-        contours = []
+    def start_with_oncurve(self, contour):
 
-        for contour in g.contours:
-            points = [p for p in contour.points]
-            while points[0].type == 'offcurve':
-                points.append(points.pop(0))
-            contours.append(points)
-
-        with g.undo('redraw'):
-            rg = RGlyph()
-            ppen = PointToSegmentPen(rg.getPen())
-
+        with contour.glyph.undo(f'Make contour #{contour.index} start with an oncurve point'):
+            # hold selection
             sels = []
-            for contour in contours:
-                ppen.beginPath()
-                for point in contour:
-                    if point.type == 'offcurve':
-                        ptype = None
-                    else:
-                        ptype = point.type
-                        if point.selected == True:
-                            # print("appended selected point!")
-                            sels.append(point)
-                    ppen.addPoint((point.x, point.y), ptype)
-                ppen.endPath()
+            for pt in contour.points:
+                if pt.selected == True:
+                    sels.append(pt)
 
-            g.clearContours()
-            g.appendGlyph(rg)
+            # set the start point to the nearest oncurve
+            for point_i, point in enumerate(contour.points):
+                if point.type != "offcurve":
+                    contour.setStartPoint(point_i)
+                    break
 
-            for c in g.contours:
-                for pt in c.points:
-                    # print("looking at pt:", pt)
-                    for sel_pt in sels:
-                        # this is messy. I'm trying to never deselect the selected points, but this attempts to get it back by looking at pt.type and coordinates. hacky.
-                        if pt.type == sel_pt.type and (pt.x, pt.y) == (sel_pt.x, sel_pt.y):
-                            pt.selected = True
-                            # print("selected it!")
+            # reapply selection
+            for pt in contour.points:
+                # print("looking at pt:", pt)
+                for sel_pt in sels:
+                    # this is messy. I'm trying to never deselect the selected points, but this attempts to get it back by looking at pt.type and coordinates. hacky.
+                    if pt.type == sel_pt.type and (pt.x, pt.y) == (sel_pt.x, sel_pt.y):
+                        pt.selected = True
 
-            # g.changed() # causes a bit of lag? I may not need this
+
+    # def redraw_glyph(self,g):
+    #     '''
+    #     re-draw glyph so point index 0 never is an offcurve
+    #     '''
+    #     contours = []
+
+    #     for contour in g.contours:
+    #         points = [p for p in contour.points]
+    #         while points[0].type == 'offcurve':
+    #             points.append(points.pop(0))
+    #         contours.append(points)
+
+    #     with g.undo('redraw'):
+    #         rg = RGlyph()
+    #         ppen = PointToSegmentPen(rg.getPen())
+
+    #         sels = []
+    #         for contour in contours:
+    #             ppen.beginPath()
+    #             for point in contour:
+    #                 if point.type == 'offcurve':
+    #                     ptype = None
+    #                 else:
+    #                     ptype = point.type
+    #                     if point.selected == True:
+    #                         # print("appended selected point!")
+    #                         sels.append(point)
+    #                 ppen.addPoint((point.x, point.y), ptype)
+    #             ppen.endPath()
+
+    #         g.clearContours()
+    #         g.appendGlyph(rg)
+
+    #         for c in g.contours:
+    #             for pt in c.points:
+    #                 # print("looking at pt:", pt)
+    #                 for sel_pt in sels:
+    #                     # this is messy. I'm trying to never deselect the selected points, but this attempts to get it back by looking at pt.type and coordinates. hacky.
+    #                     if pt.type == sel_pt.type and (pt.x, pt.y) == (sel_pt.x, sel_pt.y):
+    #                         pt.selected = True
+    #                         # print("selected it!")
+
+    #         # g.changed() # causes a bit of lag? I may not need this
 
 
     # @timeit
@@ -261,37 +285,42 @@ class Overlapper(Subscriber):
     def glyphEditorDidKeyDown(self, info):
 
         # print("glyphEditorDidKeyDown", info)
-
-        # before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
-        if self.allow_redraw == True:
-            g = CurrentGlyph()
-            hold_sel = g.selectedPoints
-            for contour in g.contours:
-                first_point = contour.points[0]
-                first_bPoint = contour.bPoints[0]
-                first_point_coords = (first_point.x, first_point.y)
-                if first_point_coords != first_bPoint.anchor:
-                    print(
-                        'fixing off-curve start point in '
-                        f'{g.name}, ({g.font.info.styleName})'
-                    )
-                    self.redraw_glyph(g)
-
-            # only do this once at the beginning
-            self.allow_redraw  = False
-
         char = info['deviceState']['keyDownWithoutModifiers']
         if char == "v" and self.mod_active == False:
-            self.v = True
+
+
+            # before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
+            if self.allow_redraw == True:
+                g = CurrentGlyph()
+
+                for contour in g.contours:
+                    first_point = contour.points[0]
+                    first_bPoint = contour.bPoints[0]
+                    first_point_coords = (first_point.x, first_point.y)
+                    if first_point_coords != first_bPoint.anchor:
+                        print(
+                            'fixing off-curve start point in '
+                            f'{g.name}, ({g.font.info.styleName})'
+                        )
+                        # self.redraw_glyph(g)
+                        self.start_with_oncurve(contour) # simple alternative to redrawing glyph
+
+                g.changed()
+
+                # only do this once at the beginning
+                self.allow_redraw  = False
 
             self.drawOverlapPreview()
             self.stroked_preview.setVisible(True)
+
+            self.v = True
 
             if CurrentGlyph().selectedPoints != ():
                 self.ready_to_go = True
             else:
                 self.ready_to_go = False
-            
+
+
 
     def glyphEditorDidKeyUp(self, info):
 
