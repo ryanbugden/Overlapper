@@ -8,7 +8,7 @@ import time
 
 '''
 This was adapted from the Add Overlap extension by Alexandre Saumier Demers.
-Warning: fixes start point in the process.
+Warning: Makes off-curve start points into on-curves in the process.
 
 Thank you for the advice:
 - Frank Griesshammer
@@ -16,10 +16,11 @@ Thank you for the advice:
 - Andy Clymer
 
 Next steps:
-- Speed it up. Only focus on specific segments as opposed to the whole glyph?
-- Keep the "Overlapping" message on the same X it was when mouseDown
+- Speed it up somehow...
+- Make it into some sort of extension in which the user can set the hotkey.
 
 Ryan Bugden
+2023.02.14
 2022.10.28
 2022.03.18
 '''
@@ -81,7 +82,9 @@ class Overlapper(Subscriber):
         self.currentX = None
         self.ready_to_go = False
         self.mod_active = False
-        
+
+        self.color = getDefault("glyphViewStrokeColor")
+
         self.glyph_editor = self.getGlyphEditor()
         self.bg_container = self.glyph_editor.extensionContainer(
             identifier="Overlapper.foreground", 
@@ -90,7 +93,7 @@ class Overlapper(Subscriber):
             )
 
         self.stroked_preview = self.bg_container.appendPathSublayer(
-            strokeColor=(0,0,0,1),
+            strokeColor=self.color,
             fillColor=(0,0,0,0),
             strokeWidth=1
             )
@@ -99,13 +102,15 @@ class Overlapper(Subscriber):
             position=(100, 100),
             size=(400, 100),
             text="Overlapping",
-            fillColor=(0, 0, 0, 1),
+            fillColor=self.color,
             horizontalAlignment="center",
             pointSize=12,
             visible=False,
             weight="bold",
             offset=(0,-50)
             )
+
+
 
 
     def start_with_oncurve(self, contour):
@@ -178,7 +183,7 @@ class Overlapper(Subscriber):
 
 
     # @timeit
-    def getSelectionData(self, offset):
+    def get_selection_data(self, offset):
         self.g = CurrentGlyph()
         sel_points = []
         for c in self.g.contours:
@@ -282,102 +287,9 @@ class Overlapper(Subscriber):
 
 
     # @timeit
-    def glyphEditorDidKeyDown(self, info):
+    def draw_overlap_preview(self):
 
-        # print("glyphEditorDidKeyDown", info)
-        char = info['deviceState']['keyDownWithoutModifiers']
-        if char == "v" and self.mod_active == False:
-
-
-            # before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
-            if self.allow_redraw == True:
-                g = CurrentGlyph()
-
-                for contour in g.contours:
-                    first_point = contour.points[0]
-                    first_bPoint = contour.bPoints[0]
-                    first_point_coords = (first_point.x, first_point.y)
-                    if first_point_coords != first_bPoint.anchor:
-                        print(
-                            'fixing off-curve start point in '
-                            f'{g.name}, ({g.font.info.styleName})'
-                        )
-                        # self.redraw_glyph(g)
-                        self.start_with_oncurve(contour) # simple alternative to redrawing glyph
-
-                g.changed()
-
-                # only do this once at the beginning
-                self.allow_redraw  = False
-
-            self.drawOverlapPreview()
-            self.stroked_preview.setVisible(True)
-
-            self.v = True
-
-            if CurrentGlyph().selectedPoints != ():
-                self.ready_to_go = True
-            else:
-                self.ready_to_go = False
-
-
-
-    def glyphEditorDidKeyUp(self, info):
-
-        char = info['deviceState']['keyDownWithoutModifiers']
-        if char == "v" and self.mod_active == False:
-            self.v = False # don't need this
-
-            if self.ready_to_go == True:
-                self.overlapIt()
-
-            self.initialX = None
-            self.toolValue = 0
-            
-            self.info.setVisible(False)
-            self.stroked_preview.setVisible(False)
-
-            self.ready_for_init = True
-            self.allow_redraw  = True
-
-
-    def glyphEditorDidChangeModifiers(self, info):
-
-        ds = info['deviceState']
-        mods = [ds['shiftDown'], ds['optionDown'], ds['controlDown'], ds['commandDown']]
-        self.mod_active = False
-        for value in mods:
-            if value > 0:
-                self.mod_active = True
-                break
-
-
-    glyphEditorDidMouseMoveDelay = 0
-    def glyphEditorDidMouseMove(self, info):
-
-        if self.v == True:
-
-            x = info['locationInGlyph'].x
-            y = info['locationInGlyph'].y
-
-            if self.initialX == None:
-                self.initialX = int(x)
-                self.initialY = int(y)
-            self.currentX = int(x)
-            self.toolValue = int((self.currentX - self.initialX)/2)
-            
-            self.drawOverlapPreview()
-
-            # draw info
-            self.info.setVisible(True)
-            self.info.setText(f"← Overlapping → {self.toolValue}")
-            self.info.setPosition((x, y))
-            
-
-    # @timeit
-    def drawOverlapPreview(self):
-
-        outline = self.getOverlappedGlyph()
+        outline = self.get_overlapped_glyph()
 
         ## debug
         # for c_i in range(len(outline.contours)):
@@ -395,9 +307,9 @@ class Overlapper(Subscriber):
 
         
     # @timeit
-    def getOverlappedGlyph(self):
+    def get_overlapped_glyph(self):
 
-        in_result, out_result = self.getSelectionData(self.toolValue)
+        in_result, out_result = self.get_selection_data(self.toolValue)
 
         self.hold_g = self.g.copy()
         for c in self.hold_g:
@@ -457,7 +369,7 @@ class Overlapper(Subscriber):
         
     
     # @timeit
-    def overlapIt(self):
+    def overlap_it(self):
 
         with self.g.undo("Overlap"):
             try:
@@ -477,6 +389,101 @@ class Overlapper(Subscriber):
 
     def roboFontDidSwitchCurrentGlyph(self, info):
         self.window = CurrentWindow()
+
+    # @timeit
+    def glyphEditorDidKeyDown(self, info):
+
+        # print("glyphEditorDidKeyDown", info)
+        char = info['deviceState']['keyDownWithoutModifiers']
+        if char == "v" and self.mod_active == False:
+
+
+            # before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
+            if self.allow_redraw == True:
+                g = CurrentGlyph()
+
+                for contour in g.contours:
+                    first_point = contour.points[0]
+                    first_bPoint = contour.bPoints[0]
+                    first_point_coords = (first_point.x, first_point.y)
+                    if first_point_coords != first_bPoint.anchor:
+                        print(
+                            'fixing off-curve start point in '
+                            f'{g.name}, ({g.font.info.styleName})'
+                        )
+                        # self.redraw_glyph(g)
+                        self.start_with_oncurve(contour) # simple alternative to redrawing glyph
+
+                g.changed()
+
+                # only do this once at the beginning
+                self.allow_redraw  = False
+
+            self.draw_overlap_preview()
+            self.stroked_preview.setVisible(True)
+
+            self.v = True
+
+            if CurrentGlyph().selectedPoints != ():
+                self.ready_to_go = True
+            else:
+                self.ready_to_go = False
+
+
+
+    def glyphEditorDidKeyUp(self, info):
+
+        char = info['deviceState']['keyDownWithoutModifiers']
+        if char == "v" and self.mod_active == False:
+            self.v = False # don't need this
+
+            if self.ready_to_go == True:
+                self.overlap_it()
+
+            self.initialX = None
+            self.toolValue = 0
+            
+            self.info.setVisible(False)
+            self.stroked_preview.setVisible(False)
+
+            self.ready_for_init = True
+            self.allow_redraw  = True
+
+
+    def glyphEditorDidChangeModifiers(self, info):
+
+        ds = info['deviceState']
+        mods = [ds['shiftDown'], ds['optionDown'], ds['controlDown'], ds['commandDown']]
+        self.mod_active = False
+        for value in mods:
+            if value > 0:
+                self.mod_active = True
+                break
+
+
+    glyphEditorDidMouseMoveDelay = 0
+    def glyphEditorDidMouseMove(self, info):
+
+        if self.v == True:
+
+            x = info['locationInGlyph'].x
+            y = info['locationInGlyph'].y
+
+            if self.initialX == None:
+                self.initialX = int(x)
+                self.initialY = int(y)
+            self.currentX = int(x)
+            self.toolValue = int((self.currentX - self.initialX)/2)
+            
+            self.draw_overlap_preview()
+
+            # draw info
+            self.info.setVisible(True)
+            self.info.setText(f"← Overlapping → {self.toolValue}")
+            self.info.setPosition((self.initialX, y))
+            
+
+
 
 
 
