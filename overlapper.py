@@ -1,8 +1,9 @@
+import AppKit
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from fontTools.ufoLib.pointPen import PointToSegmentPen  # for Frank’s code setting start points to on-curves
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
 from mojo.UI import CurrentWindow, getDefault
-import math
+from math import sqrt
 import merz
 import time
 
@@ -16,7 +17,6 @@ Thank you for the advice:
 - Andy Clymer
 
 Next steps:
-- Support for dark mode
 - Make it into some sort of extension in which the user can set the hotkey.
 - Speed it up somehow...
 
@@ -59,7 +59,7 @@ def lengthen_line(pt1, pt2, factor, direction="out"):
 
 def get_vector_distance(pt1, pt2):
     x1, y1, x2, y2 = pt1.x, pt1.y, pt2.x, pt2.y
-    dist = math.sqrt((x2-x1)**2 + (y2-y1)**2)
+    dist = sqrt((x2-x1)**2 + (y2-y1)**2)
 
     return abs(dist)
 
@@ -77,13 +77,12 @@ class Overlapper(Subscriber):
     to hard corners of contours in RoboFont.
     '''
 
-
     def build(self):
         self.allow_redraw = True
         self.tool_value = 0
         self.stored_pts = None
         self.stored_components = ()
-        self.v = False
+        self.key_down = False
         self.initial_x = None
         self.initial_y = None
         self.current_x = None
@@ -92,8 +91,7 @@ class Overlapper(Subscriber):
         self.g = None
 
         self.snap  = getDefault("glyphViewRoundValues")  # Expensing up top to add performance, but if snapping value is changed mid-session, RF will need restart for this to take effect on Overlapper
-        self.color = getDefault("glyphViewStrokeColor")
-
+        
         self.glyph_editor = self.getGlyphEditor()
         self.bg_container = self.glyph_editor.extensionContainer(
             identifier="Overlapper.foreground", 
@@ -102,22 +100,34 @@ class Overlapper(Subscriber):
             )
 
         self.stroked_preview = self.bg_container.appendPathSublayer(
-            strokeColor=self.color,
+            strokeColor=(0,0,0,0),
             fillColor=(0,0,0,0),
             strokeWidth=1
             )
-
+        
         self.info = self.bg_container.appendTextLineSublayer(
             position=(100, 100),
-            size=(400, 100),
+            size=(500, 160),
             text="Overlapping",
-            fillColor=self.color,
+            fillColor=(0,0,0,0),
             horizontalAlignment="center",
             pointSize=12,
             visible=False,
             weight="bold",
-            offset=(0,-50)
+            offset=(0,-40)
             )
+        self.set_colors()
+
+
+    def set_colors(self):
+        # Check to see if you're in dark mode or not
+        self.mode_suffix = ""
+        if AppKit.NSApp().appearance() == AppKit.NSAppearance.appearanceNamed_(AppKit.NSAppearanceNameDarkAqua):
+            self.mode_suffix = ".dark"
+        self.color = getDefault(f"glyphViewStrokeColor{self.mode_suffix}")
+
+        self.stroked_preview.setStrokeColor(self.color)
+        self.info.setFillColor(self.color)
 
 
     def start_with_oncurve(self, contour):
@@ -359,10 +369,16 @@ class Overlapper(Subscriber):
 
         char = info['deviceState']['keyDownWithoutModifiers']
         if char == "v" and self.mod_active == False:
+            self.g = CurrentGlyph()
+
+            if self.g.selectedPoints:
+                self.ready_to_go = True
+            else:
+                self.ready_to_go = False
+                return
 
             # Before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
-            if self.allow_redraw == True:
-                self.g = CurrentGlyph()
+            if self.allow_redraw == True:    
 
                 for contour in self.g.contours:
                     first_point = contour.points[0]
@@ -377,27 +393,23 @@ class Overlapper(Subscriber):
 
                 self.g.changed()
 
-                # Only do this once at the beginning
+                # Only do this once at the beginning 
                 self.allow_redraw  = False
 
             # Store the components
             self.stored_components = self.g.components
 
             self.draw_overlap_preview()
+            self.set_colors()
             self.stroked_preview.setVisible(True)
 
-            self.v = True
+            self.key_down = True
 
-            if CurrentGlyph().selectedPoints != ():
-                self.ready_to_go = True
-            else:
-                self.ready_to_go = False
-
-
+    
     def glyphEditorDidKeyUp(self, info):
         char = info['deviceState']['keyDownWithoutModifiers']
         if char == "v" and self.mod_active == False:
-            self.v = False  # Don't need this
+            self.key_down = False  # Don't need this
 
             if self.ready_to_go == True:
                 self.overlap_it()
@@ -424,7 +436,7 @@ class Overlapper(Subscriber):
 
     glyphEditorDidMouseMoveDelay = 0
     def glyphEditorDidMouseMove(self, info):
-        if self.v == True:
+        if self.key_down == True:
             x = info['locationInGlyph'].x
             y = info['locationInGlyph'].y
 
@@ -438,7 +450,7 @@ class Overlapper(Subscriber):
 
             # Draw info
             self.info.setVisible(True)
-            self.info.setText(f"← Overlapping → {self.tool_value}")
+            self.info.setText(f" ← Overlapping → \n{self.tool_value}")
             self.info.setPosition((self.initial_x, y))
             
 
