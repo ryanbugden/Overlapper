@@ -7,7 +7,7 @@ A RoboFont extension that gives you the power to add overlaps (+) and chamfers (
 
 ## How to use Overlapper:
 1. Select at least one on-curve point, preferably on a sharp corner.
-2. Hold `v`, and move the mouse left and right to make your corner into a chamfer or overlap, respectively. The further you move your mouse, the bigger the chamfer or overlap. 
+2. Hold `v`, and move the mouse right or left to make your corner into an overlap or a chamfer, respectively. The further you move your mouse, the bigger the overlap or chamfer. 
 3. Let go of `v` to commit the resulting shape.
 
 *Note: You can change hotkey in Extensions > Overlapper > Settings...*

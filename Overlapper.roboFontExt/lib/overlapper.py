@@ -106,6 +106,7 @@ class Overlapper(Subscriber):
             weight="bold",
             offset=(0,-40)
             )
+        self.info.setFigureStyle('tabular')
         self.set_colors()  # Set the correct colors for outline and text (light or dark mode), at least upon load. Will set again later on.
 
 
