@@ -1,24 +1,24 @@
 # Overlapper
-Dynamic and high-fidelity implementation of the Add Overlap tool.
+#### Ryan Bugden, 2022.03.18
 
-This was based on the Add Overlap extension by Alexandre Saumier Demers.
-**Warning:** Makes off-curve start points into on-curves in the process.
+A RoboFont extension that gives you the power to add overlaps (+) and chamfers (-) to your glyph in a dynamic and high-fidelity way. The result is more editability when drawing, and more flexibility when interpolating.
 
+*This is based on the idea behind [Add Overlap](https://github.com/asaumierdemers/AddOverlap) extension by Alexandre Saumier Demers.*
 
+## How to use Overlapper:
+1. Select at least one on-curve point, preferably on a sharp corner.
+2. Hold `v`, and move the mouse left and right to make your corner into a chamfer or overlap, respectively. The further you move your mouse, the bigger the chamfer or overlap. 
+3. Let go of `v` to commit the resulting shape.
 
-#### Next steps:
-- Make it into some sort of extension in which the user can set the hotkey.
-- Speed it up somehow...
+*Note: You can change hotkey in Extensions > Overlapper > Settings...*
 
-#### Thank you for the advice:
-- Frank Griesshammer
-- Jackson Cavanaugh
-- Andy Clymer
+---    
 
-```
-Ryan Bugden
-2023.05.30
-2023.02.14
-2022.10.28
-2022.03.18
-```
+#### Known issues:
+- Speed...
+- Components are not seen in overlap preview, but they are added back upon key-up.
+- If your glyph has contours with start points that are off-curves, this will make the nearest on-curve the start point in the process. This is the current workaround to preventing Overlapper from crashing RoboFont.
+ 
+---
+ 
+Special thanks to Frank Griesshammer, Jackson Cavanaugh, Andy Clymer.
