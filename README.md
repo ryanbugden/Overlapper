@@ -12,8 +12,8 @@ A RoboFont extension that gives you the power to add overlaps (+) and chamfers (
 
 *Note: You can change hotkey in Extensions > Overlapper > Settings...*
 
-<img src="./_images/overlapper_overlap.gif"  width="400">
-<img src="./_images/overlapper_chamfer.gif"  width="400">
+<img src="./_images/overlapper_overlap.gif"  width="360">
+<img src="./_images/overlapper_chamfer.gif"  width="360">
 
 ---    
 
