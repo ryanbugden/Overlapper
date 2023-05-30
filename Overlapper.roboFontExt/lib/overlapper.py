@@ -441,7 +441,10 @@ class Overlapper(Subscriber):
 
             # Draw info
             self.info.setVisible(True)
-            self.info.setText(f" ← Overlapping → \n{self.tool_value}")
+            self.description = 'Overlapping'
+            if self.tool_value < 0:
+                self.description = 'Chamfering'
+            self.info.setText(f" ← {self.description} → \n{self.tool_value}")
             self.info.setPosition((self.initial_x, y))
             
 
