@@ -2,32 +2,20 @@ import AppKit
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from fontTools.ufoLib.pointPen import PointToSegmentPen  # for Frank’s code setting start points to on-curves
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
+from mojo.extensions import getExtensionDefault
 from mojo.UI import CurrentWindow, getDefault
 from math import sqrt
 import merz
 import time
 
-'''
-This was adapted from the Add Overlap extension by Alexandre Saumier Demers.
-Warning: Makes off-curve start points into on-curves in the process.
 
-Thank you for the advice:
-- Frank Griesshammer
-- Jackson Cavanaugh
-- Andy Clymer
-
-Next steps:
-- Make it into some sort of extension in which the user can set the hotkey.
-- Speed it up somehow...
-
-Ryan Bugden
-2023.05.30
-2023.02.14
-2022.10.28
-2022.03.18
-'''
 
 DEBUG = False
+
+EXTENSION_KEY = 'com.ryanbugden.overlapper.settings'
+def get_setting_from_defaults(setting):
+    all_settings = getExtensionDefault(EXTENSION_KEY, fallback={'hotkey': 'v'})
+    return all_settings[setting]
 
 # Testing method from Jackson. Add @timeit before methods to test
 def timeit(method):
@@ -90,6 +78,7 @@ class Overlapper(Subscriber):
         self.mod_active = False
         self.g = None
 
+        self.hotkey = get_setting_from_defaults('hotkey')
         self.snap  = getDefault("glyphViewRoundValues")  # Expensing up top to add performance, but if snapping value is changed mid-session, RF will need restart for this to take effect on Overlapper
         
         self.glyph_editor = self.getGlyphEditor()
@@ -116,7 +105,7 @@ class Overlapper(Subscriber):
             weight="bold",
             offset=(0,-40)
             )
-        self.set_colors()
+        self.set_colors()  # Set the correct colors for outline and text (light or dark mode), at least upon load. Will set again later on.
 
 
     def set_colors(self):
@@ -368,7 +357,8 @@ class Overlapper(Subscriber):
         if DEBUG == True: print("glyphEditorDidKeyDown", info)
 
         char = info['deviceState']['keyDownWithoutModifiers']
-        if char == "v" and self.mod_active == False:
+        self.hotkey = get_setting_from_defaults('hotkey')
+        if char == self.hotkey and self.mod_active == False:
             self.g = CurrentGlyph()
 
             if self.g.selectedPoints:
@@ -408,7 +398,7 @@ class Overlapper(Subscriber):
     
     def glyphEditorDidKeyUp(self, info):
         char = info['deviceState']['keyDownWithoutModifiers']
-        if char == "v" and self.mod_active == False:
+        if char == self.hotkey and self.mod_active == False:
             self.key_down = False  # Don't need this
 
             if self.ready_to_go == True:
