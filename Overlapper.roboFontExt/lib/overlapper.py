@@ -3,7 +3,7 @@ from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from fontTools.ufoLib.pointPen import PointToSegmentPen  # for Frank’s code setting start points to on-curves
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
 from mojo.extensions import getExtensionDefault
-from mojo.UI import CurrentWindow, getDefault
+from mojo.UI import CurrentWindow, getDefault, appearanceColorKey
 from math import sqrt
 import merz
 import time
@@ -111,11 +111,8 @@ class Overlapper(Subscriber):
 
 
     def set_colors(self):
-        # Check to see if you're in dark mode or not
-        self.mode_suffix = ""
-        if AppKit.NSApp().appearance() == AppKit.NSAppearance.appearanceNamed_(AppKit.NSAppearanceNameDarkAqua):
-            self.mode_suffix = ".dark"
-        self.color = getDefault(f"glyphViewStrokeColor{self.mode_suffix}")
+        # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
+        self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
 
         self.stroked_preview.setStrokeColor(self.color)
         self.info.setFillColor(self.color)
