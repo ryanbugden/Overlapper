@@ -9,7 +9,6 @@ import merz
 import time
 
 
-
 DEBUG = False
 
 EXTENSION_KEY = 'com.ryanbugden.overlapper.settings'
@@ -108,14 +107,6 @@ class Overlapper(Subscriber):
             )
         self.info.setFigureStyle('tabular')
         self.set_colors()  # Set the correct colors for outline and text (light or dark mode), at least upon load. Will set again later on.
-
-
-    def set_colors(self):
-        # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
-        self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
-
-        self.stroked_preview.setStrokeColor(self.color)
-        self.info.setFillColor(self.color)
 
 
     def start_with_oncurve(self, contour):
@@ -347,10 +338,6 @@ class Overlapper(Subscriber):
                 pass
 
 
-    def roboFontDidSwitchCurrentGlyph(self, info):
-        self.window = CurrentWindow()
-
-
     @timeit
     def glyphEditorDidKeyDown(self, info):
         if DEBUG == True: print("glyphEditorDidKeyDown", info)
@@ -385,11 +372,10 @@ class Overlapper(Subscriber):
                 # Only do this once at the beginning 
                 self.allow_redraw  = False
 
-            # Store the components
+            # Store the components, so we can delete them from the preview glyph and add them back upon commit.
             self.stored_components = self.g.components
 
             self.draw_overlap_preview()
-            self.set_colors()
             self.stroked_preview.setVisible(True)
 
             self.key_down = True
@@ -444,10 +430,24 @@ class Overlapper(Subscriber):
                 self.description = 'Chamfering'
             self.info.setText(f" ← {self.description} → \n{self.tool_value}")
             self.info.setPosition((self.initial_x, y))
+
+
+    # Change the UI colors if the app switches to dark mode.0
+    def roboFontAppearanceChanged(self, info):
+        self.set_colors()
+
+
+    def set_colors(self):
+        # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
+        self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
+
+        self.stroked_preview.setStrokeColor(self.color)
+        self.info.setFillColor(self.color)
             
 
 # ======================================================================================
         
+
 if __name__ == "__main__":    
     registerGlyphEditorSubscriber(Overlapper)
 

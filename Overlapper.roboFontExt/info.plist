@@ -30,10 +30,10 @@
 	<key>requiresVersionMajor</key>
 	<string>4</string>
 	<key>requiresVersionMinor</key>
-	<string>3</string>
+	<string>4b</string>
 	<key>timeStamp</key>
-	<real>1685483579.7035179</real>
+	<real>1685548261</real>
 	<key>version</key>
-	<string>1.0</string>
+	<string>1.1</string>
 </dict>
 </plist>
