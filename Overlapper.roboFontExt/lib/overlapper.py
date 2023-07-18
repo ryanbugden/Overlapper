@@ -3,10 +3,13 @@ from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from fontTools.ufoLib.pointPen import PointToSegmentPen  # for Frank’s code setting start points to on-curves
 from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
 from mojo.extensions import getExtensionDefault
-from mojo.UI import CurrentWindow, getDefault, appearanceColorKey
+from mojo.roboFont import version
+from mojo.UI import CurrentWindow, getDefault
 from math import sqrt
 import merz
 import time
+if version > "4.4":
+    from mojo.UI import appearanceColorKey
 
 
 DEBUG = False
@@ -446,8 +449,11 @@ class Overlapper(Subscriber):
 
 
     def set_colors(self):
-        # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
-        self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
+        if version > "4.4":
+            # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
+            self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
+        else:
+            self.color = getDefault('glyphViewStrokeColor')
         self.stroked_preview.setStrokeColor(self.color)
         self.info.setFillColor(self.color)
             
