@@ -287,10 +287,12 @@ class Overlapper(Subscriber):
                     # Add a gap, special case if starting over on the contour
                     if i + 1 == len(c.segments) - hits:
                         if DEBUG == True: print("1", "this is the end of the contour", "should be putting a point at the 0 index of: ",  out_result[(x, y)])
+                        c.segments[-1].smooth = False  # Make sure the current segment doesn't maintain smooth; it's now a corner.
                         c.insertSegment(0, type="line", points=[out_result[(x, y)][0]], smooth=False)
                         next_seg = c.segments[1]
                     else:
                         if DEBUG == True: print("2")
+                        c.segments[i + hits].smooth = False  # Make sure the current segment doesn't maintain smooth; it's now a corner.
                         c.insertSegment(i + 1 + hits, type="line", points=[out_result[(x, y)][0]], smooth=False)
                         try:
                             if DEBUG == True: print("2a")
@@ -432,7 +434,7 @@ class Overlapper(Subscriber):
             self.info.setPosition((self.initial_x, y))
 
 
-    # Change the UI colors if the app switches to dark mode.0
+    # Change the UI colors if the app switches to dark mode.
     def roboFontAppearanceChanged(self, info):
         self.set_colors()
 
