@@ -54,6 +54,14 @@ def get_vector_distance(pt1, pt2):
 
 def my_round(x, base=1):
     return base * round(x/base)
+    
+    
+def contour_is_open(contour):
+    point_types = set([pt.type for pt in contour.points])
+    if "move" in point_types:
+        return True
+    else:
+        return False
 
 
 # ======================================================================================
@@ -130,7 +138,6 @@ class Overlapper(Subscriber):
                     # This is messy. I'm trying to never deselect the selected points, but this attempts to get it back by looking at pt.type and coordinates. hacky.
                     if pt.type == sel_pt.type and (pt.x, pt.y) == (sel_pt.x, sel_pt.y):
                         pt.selected = True
-
 
     @timeit
     def get_selection_data(self, offset):
@@ -261,13 +268,14 @@ class Overlapper(Subscriber):
         self.hold_g.clearComponents()
 
         for c in self.hold_g:
+            contour_open = contour_is_open(c)
             hits = 0  # How many points you've gone through in the loop that are selected. this will bump up the index # assigned to newly created segments
             for i, seg in enumerate(c.segments):
+                if contour_open: i = i - 1  # Not sure why, but shifting segment index is what makes non-closed contours behave as expected
                 x, y = seg.onCurve.x, seg.onCurve.y
                 next_x, next_y = None, None
                 if (x, y) in in_result.keys():
                     
-
                     if len(seg.points) == 3:
                         seg.offCurve[0].x, seg.offCurve[0].y = in_result[(x, y)][-3][0], in_result[(x, y)][-3][1]
                         seg.offCurve[1].x, seg.offCurve[1].y = in_result[(x, y)][-2][0], in_result[(x, y)][-2][1]
