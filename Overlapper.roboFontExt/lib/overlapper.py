@@ -179,7 +179,6 @@ class Overlapper(Subscriber):
                             in_dist = get_vector_distance(onC_here, onC_before)
                             if DEBUG == True: print("line in_dist", in_dist)
                         
-                        
                         # Get outbound curve information for selected point
                         try:
                             seg_after = c.segments[i+1]
@@ -264,8 +263,7 @@ class Overlapper(Subscriber):
         in_result, out_result = self.get_selection_data(self.tool_value)
 
         self.hold_g = self.g.copy()
-        # Remove components for this preview. They're added back on mouse-up.
-        self.hold_g.clearComponents()
+        self.hold_g.clearComponents()  # Remove components for this preview. They're added back on mouse-up.
 
         for c in self.hold_g:
             contour_open = contour_is_open(c)
@@ -450,7 +448,6 @@ class Overlapper(Subscriber):
     def set_colors(self):
         # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
         self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
-
         self.stroked_preview.setStrokeColor(self.color)
         self.info.setFillColor(self.color)
             
