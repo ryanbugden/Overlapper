@@ -321,7 +321,7 @@ class Overlapper(Subscriber):
     def overlap_it(self):
         with self.g.undo("Overlap"):
             try:
-                self.g.clear()
+                self.g.clear(image=False)
                 self.g.appendGlyph(self.hold_g)
 
                 # Restore components
