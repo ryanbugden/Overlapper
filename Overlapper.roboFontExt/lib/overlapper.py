@@ -5,7 +5,7 @@ from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
 from mojo.extensions import getExtensionDefault
 from mojo.roboFont import version
 from mojo.UI import CurrentWindow, getDefault
-from math import sqrt
+from math import sqrt, atan
 import merz
 import time
 if version > "4.4":
@@ -35,7 +35,6 @@ def timeit(method):
         return result
     return timed
 
-
 def lengthen_line(pt1, pt2, factor, direction="out"):
     x1, y1, x2, y2           = pt1[0], pt1[1], pt2[0], pt2[1]
     delta_x, delta_y         = x2 - x1, y2 - y1
@@ -47,25 +46,141 @@ def lengthen_line(pt1, pt2, factor, direction="out"):
     else:
         return ((new_x, new_y), (x2, y2))
 
-
 def get_vector_distance(pt1, pt2):
-    x1, y1, x2, y2 = pt1.x, pt1.y, pt2.x, pt2.y
+    try:
+        x1, y1, x2, y2 = pt1.x, pt1.y, pt2.x, pt2.y
+    except:
+        x1, y1, x2, y2 = pt1[0], pt1[1], pt2[0], pt2[1]
     dist = sqrt((x2-x1)**2 + (y2-y1)**2)
-
     return abs(dist)
-
 
 def my_round(x, base=1):
     return base * round(x/base)
+        
+def contour_has_points(contour, point_coordinates):
+    for pt in contour.points:
+        if (pt.x, pt.y) in point_coordinates:
+            return True
+    return False
     
-    
-def contour_is_open(contour):
-    point_types = set([pt.type for pt in contour.points])
-    if "move" in point_types:
-        return True
-    else:
-        return False
+def average_coordinates(list_of_coords):
+    av_x = sum([x for (x, y) in list_of_coords]) / len(list_of_coords)
+    av_y = sum([y for (x, y) in list_of_coords]) / len(list_of_coords)
+    return(av_x, av_y)
 
+def break_list_into_quadruplets(list_of_coords):
+    if len(list_of_coords) == 8:
+        group_1 = [min(list_of_coords)]
+        group_2 = [max(list_of_coords)]
+        
+        new_list = [item for item in list_of_coords if item not in group_1 and item not in group_2]
+        for coord in new_list:
+            # If closer to group 1, add to group 1
+            if get_vector_distance(coord, average_coordinates(group_1)) < get_vector_distance(coord, average_coordinates(group_2)):
+                if len(group_1) < 4:
+                    group_1.append(coord)
+                else:
+                    group_2.append(coord)
+            else:
+                if len(group_2) < 4:
+                    group_2.append(coord)
+                else:
+                    group_1.append(coord)
+        return group_1, group_2
+    else:
+        return list_of_coords[0:3]
+    
+def add_contour_to_end(g, contour_a, contour_b):
+    '''Adds one contour to another'''
+    deleted = False
+    b_copy = contour_b.copy()
+    g.removeContour(contour_b)
+    for pt in b_copy.points:
+        if pt.type == 'move':
+            contour_a.appendPoint(
+                (pt.x, pt.y), 'line', pt.smooth, pt.name, pt.identifier)
+        else:
+            contour_a.appendPoint(
+                (pt.x, pt.y), pt.type, pt.smooth, pt.name, pt.identifier)
+    
+def close_contour_at_coords(g, list_of_two_coords):
+    points = []
+    contours = []
+    for contour in g:
+        for pt in contour.points:
+            if (pt.x, pt.y) in list_of_two_coords:
+                points.append(pt)
+                if pt.contour not in contours:
+                    # Make sure the one with point index `0` is the second one
+                    if pt.type != 'move':                        
+                        contours.insert(0, pt.contour)
+                    else:
+                        contours.append(pt.contour)
+    # If it's the same contour, just close it.
+    if len(contours) == 1:
+        for contour in g:
+            for pt in contour.points:
+                if (pt.x, pt.y) in list_of_two_coords:
+                    if pt.type == 'move': pt.type = 'line'
+    else:
+        add_contour_to_end(g, contours[0], contours[1])
+            
+            
+def get_closest_two_coordinates(list_of_coordinates):
+    closest_dist = 0
+    closest_coords = []
+    for coord in list_of_coordinates:
+        for coord_2 in list_of_coordinates:
+            dist = get_vector_distance(coord, coord_2)
+            if (dist != 0 and dist < closest_dist) or closest_dist == 0:
+                closest_dist = dist
+                closest_coords = [coord, coord_2]
+    return closest_coords
+    
+def average_point_pos(point_to_move, other_point_coords):
+    point_to_move.x = (point_to_move.x + other_point_coords[0])/2
+    point_to_move.y = (point_to_move.y + other_point_coords[1])/2
+    
+def check_continuous(list_of_coords, tol=0.05):
+    try:
+        (min_x, min_y), (max_x, max_y) = min(list_of_coords), max(list_of_coords)
+    except ValueError:  # Not sure why this is necessary. Catches empty lists, assumes not continuous.
+        return False
+    if max_x == min_x:
+        general_angle = 0.7853981633974483  # 90 degrees
+    else:
+        general_angle = atan((max_y - min_y)/(max_x - min_x))
+    for i, coord in enumerate(list_of_coords):
+        if (coord[0] - list_of_coords[i-1][0]) == 0:
+            continue
+        local_angle = atan((coord[1] - list_of_coords[i-1][1])/(coord[0] - list_of_coords[i-1][0]))
+        if local_angle < general_angle - tol or local_angle > general_angle + tol:
+            return False
+    return True
+    
+def search_continuity(glyph, pair_of_points):
+    for c in glyph.contours:
+        # Get the indexes of our central pair of points
+        indexes_to_analyze = []
+        for pt in c.points:
+            if (pt.x, pt.y) in pair_of_points:
+                indexes_to_analyze.append(pt.index)
+        # Add contiguous points to the search
+        new_indexes_to_analyze = []
+        for i in indexes_to_analyze:
+            new_indexes_to_analyze.append(i)
+            if i + 1 not in new_indexes_to_analyze and i + 1 < len(c.points):
+                new_indexes_to_analyze.append(i + 1)
+            if i - 1 not in new_indexes_to_analyze:
+                if i - 1 == -1:
+                    new_indexes_to_analyze.append(len(c.points) - 1)
+                else:
+                    new_indexes_to_analyze.append(i - 1)
+        # Check if the coordinates of the four points segment runs along the same line
+        coords_to_analyze = [(pt.x, pt.y) for pt in c.points if pt.index in new_indexes_to_analyze]
+        if check_continuous(coords_to_analyze) == True:
+            return True
+    return False
 
 # ======================================================================================
 
@@ -226,11 +341,13 @@ class Overlapper(Subscriber):
 
                         if len(in_args) == 4:
                             in_result = splitCubicAtT(in_args[0], in_args[1], in_args[2], in_args[3], in_factor)[0]
+                            self.has_curve = True
                         else:
                             in_result = lengthen_line(in_args[0], in_args[1], in_factor, "in")
                         
                         if len(out_args) == 4:
                             out_result = splitCubicAtT(out_args[0], out_args[1], out_args[2], out_args[3], -(out_factor-1))[1]
+                            self.has_curve = True
                         else:
                             out_result = lengthen_line(out_args[0], out_args[1], -(out_factor-1), "out")
                                 
@@ -266,17 +383,16 @@ class Overlapper(Subscriber):
         in_result, out_result = self.get_selection_data(self.tool_value)
 
         self.hold_g = self.g.copy()
-        self.hold_g.clearComponents()  # Remove components for this preview. They're added back on mouse-up.
-
+        # Remove components for this preview. They're added back on mouse-up.
+        self.hold_g.clearComponents()
+        
         for c in self.hold_g:
-            contour_open = contour_is_open(c)
             hits = 0  # How many points you've gone through in the loop that are selected. this will bump up the index # assigned to newly created segments
             for i, seg in enumerate(c.segments):
-                if contour_open: i = i - 1  # Not sure why, but shifting segment index is what makes non-closed contours behave as expected
+                if c.open: i = i-1  # Not sure why, but shifting segment index is what makes non-closed contours behave as expected
                 x, y = seg.onCurve.x, seg.onCurve.y
                 next_x, next_y = None, None
                 if (x, y) in in_result.keys():
-                    
                     if len(seg.points) == 3:
                         seg.offCurve[0].x, seg.offCurve[0].y = in_result[(x, y)][-3][0], in_result[(x, y)][-3][1]
                         seg.offCurve[1].x, seg.offCurve[1].y = in_result[(x, y)][-2][0], in_result[(x, y)][-2][1]
@@ -306,6 +422,7 @@ class Overlapper(Subscriber):
                         try:
                             if DEBUG == True: print("2a")
                             next_seg = c.segments[i + 2 + hits]
+                            if c.open: next_seg = c.segments[i + 3 + hits]  # Again, not sure why this helps open contours.
                         except IndexError:
                             if DEBUG == True: print("2b")
                             next_seg = c.segments[0]
@@ -324,7 +441,18 @@ class Overlapper(Subscriber):
 
                     # You just went through and added another point, so prepare to bump up the index one more than previously assumed
                     hits += 1
-
+        
+        # Cross-Overlap feature
+        # Make a list of all of the coordinates of the resulting overlapped points.
+        resulting_coords = [item[-1] for item in list(in_result.values())] + [item[0] for item in list(out_result.values())]
+        # Only do this if 2 or 4 points are selected (4 or 8 resulting points)
+        if self.shift_down:
+            if len(resulting_coords) == 4:
+                self.convert_overlaps_to_cross_overlap(self.hold_g, resulting_coords)
+            elif len(resulting_coords) == 8:
+                for quadruplet in break_list_into_quadruplets(resulting_coords):
+                    self.convert_overlaps_to_cross_overlap(self.hold_g, quadruplet)
+            
         return self.hold_g
         
     
@@ -334,28 +462,85 @@ class Overlapper(Subscriber):
             try:
                 self.g.clear(image=False)
                 self.g.appendGlyph(self.hold_g)
-
                 # Restore components
                 for comp in self.stored_components:
                     self.g.appendComponent(component=comp)
-
                 if self.snap != 0:
                     for c in self.g.contours:
                         for pt in c.points:
-                            pt.x, pt.y = my_round(pt.x, snap), my_round(pt.y,  snap)
-                            
-                self.g.changed()
+                            pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
+                    self.g.changed()
             except:
                 pass
-
-
+    
+    def convert_overlaps_to_cross_overlap(self, glyph, list_of_point_coords):
+        # Break the contours
+        for c in glyph.contours:
+            for pt in c.points:
+                if (pt.x, pt.y) in list_of_point_coords:
+                    if DEBUG == True: print("breaking contour at", pt)
+                    c.breakContour(pt)
+                
+        # Remove the short segments
+        point_pairs = []
+        for c in glyph.contours:
+            remove = True
+            if len(c.points) == 2:
+                for pt in c.points:                
+                    if (pt.x, pt.y) in list_of_point_coords:
+                        continue
+                    else:
+                        remove = False
+                # Remove the short segment contour if both points’ coordinates are in the list of coordinates.
+                if remove == True:
+                    if DEBUG == True: print("removing contour", c)
+                    # Add coordinates of points you're about to remove to a list of associated points.
+                    point_pairs.append([(pt.x, pt.y) for pt in c.points])
+                    glyph.removeContour(c)
+        
+        # Close the gaps the opposite way.
+        close_contour_at_coords(glyph, [point_pairs[0][1], point_pairs[1][0]])
+        close_contour_at_coords(glyph, [point_pairs[0][0], point_pairs[1][1]])
+    
+        # # Close the gaps       
+        # # Smallest gap first
+        # print("LIST OF COORDS", list_of_point_coords)
+        # coords_to_join = get_closest_two_coordinates(list_of_point_coords)
+        # print("small, closing contour at", coords_to_join)
+        # close_contour_at_coords(glyph, coords_to_join)
+        # # Big gap second
+        # big_gap_coords = [coord for coord in list_of_point_coords if coord not in coords_to_join]
+        # print("big, closing contour at", big_gap_coords)
+        # close_contour_at_coords(glyph, big_gap_coords)
+                    
+        # Remove two points if there is no curve, and the four resulting points are along the same line
+        if self.has_curve == False:
+            for pair in [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]:
+                # Check if the four-points segment runs along the same line
+                if search_continuity(glyph, pair) == True:
+                    # If so, remove the point
+                    for c in glyph:
+                        for pt in c.points:
+                            if (pt.x, pt.y) in pair:
+                                c.removePoint(pt, preserveCurve=True)
+                    
+                            
+    glyphEditorDidKeyDownDelay = 0
     @timeit
     def glyphEditorDidKeyDown(self, info):
         if DEBUG == True: print("glyphEditorDidKeyDown", info)
+        
+        self.has_curve = False
+        
+        # Check Shift modifier
+        if info['deviceState']['shiftDown'] == 0:
+            self.shift_down = False
+        else:
+            self.shift_down = True
 
         char = info['deviceState']['keyDownWithoutModifiers']
         self.hotkey = get_setting_from_defaults('hotkey')
-        if char == self.hotkey and self.mod_active == False:
+        if char.lower() == self.hotkey and self.mod_active == False:
             self.g = CurrentGlyph()
 
             if self.g.selectedPoints:
@@ -393,8 +578,17 @@ class Overlapper(Subscriber):
 
     
     def glyphEditorDidKeyUp(self, info):
+        if DEBUG == True: print("glyphEditorDidKeyUp", info)
+        self.g = info['glyph']
+        
+        # Check Shift modifier
+        if info['deviceState']['shiftDown'] == 0:
+            self.shift_down = False
+        else:
+            self.shift_down = True
+        
         char = info['deviceState']['keyDownWithoutModifiers']
-        if char == self.hotkey and self.mod_active == False:
+        if char.lower() == self.hotkey and self.mod_active == False:
             self.key_down = False  # Don't need this
 
             if self.ready_to_go == True:
@@ -412,7 +606,7 @@ class Overlapper(Subscriber):
 
     def glyphEditorDidChangeModifiers(self, info):
         ds = info['deviceState']
-        mods = [ds['shiftDown'], ds['optionDown'], ds['controlDown'], ds['commandDown']]
+        mods = [ds['optionDown'], ds['controlDown'], ds['commandDown']]  # ds['shiftDown'], 
         self.mod_active = False
         for value in mods:
             if value > 0:
