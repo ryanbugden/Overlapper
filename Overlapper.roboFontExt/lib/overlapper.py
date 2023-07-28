@@ -142,18 +142,21 @@ def average_point_pos(point_to_move, other_point_coords):
     point_to_move.y = (point_to_move.y + other_point_coords[1])/2
     
 def check_continuous(list_of_coords, tol=0.1):
+    print(list_of_coords)
     try:
         (min_x, min_y), (max_x, max_y) = min(list_of_coords), max(list_of_coords)
     except ValueError:  # Not sure why this is necessary. Catches empty lists, assumes not continuous.
         return False
-    if max_x == min_x:
+    if list_of_coords[1][0] == list_of_coords[0][0]:
         general_angle = 0.7853981633974483  # 90 degrees
     else:
-        general_angle = atan((max_y - min_y)/(max_x - min_x))
+        # Choose first pair of coords to set the standard for angle
+        general_angle = atan((list_of_coords[1][1] - list_of_coords[0][1])/(list_of_coords[1][0] - list_of_coords[0][0]))
     for i, coord in enumerate(list_of_coords):
         if (coord[0] - list_of_coords[i-1][0]) == 0:
-            continue
-        local_angle = atan((coord[1] - list_of_coords[i-1][1])/(coord[0] - list_of_coords[i-1][0]))
+            local_angle = 0.7853981633974483
+        else:
+            local_angle = atan((coord[1] - list_of_coords[i-1][1])/(coord[0] - list_of_coords[i-1][0]))
         if local_angle < general_angle - tol or local_angle > general_angle + tol:
             return False
     return True
