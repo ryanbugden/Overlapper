@@ -141,7 +141,7 @@ def average_point_pos(point_to_move, other_point_coords):
     point_to_move.x = (point_to_move.x + other_point_coords[0])/2
     point_to_move.y = (point_to_move.y + other_point_coords[1])/2
     
-def check_continuous(list_of_coords, tol=0.05):
+def check_continuous(list_of_coords, tol=0.1):
     try:
         (min_x, min_y), (max_x, max_y) = min(list_of_coords), max(list_of_coords)
     except ValueError:  # Not sure why this is necessary. Catches empty lists, assumes not continuous.
@@ -524,8 +524,6 @@ class Overlapper(Subscriber):
                             if (pt.x, pt.y) in pair:
                                 c.removePoint(pt, preserveCurve=True)
                     
-                            
-    glyphEditorDidKeyDownDelay = 0
     @timeit
     def glyphEditorDidKeyDown(self, info):
         if DEBUG == True: print("glyphEditorDidKeyDown", info)
@@ -633,6 +631,8 @@ class Overlapper(Subscriber):
             self.description = 'Overlapping'
             if self.tool_value < 0:
                 self.description = 'Chamfering'
+            if self.shift_down:
+                self.description = 'Cross-overlapping'
             self.info.setText(f" ← {self.description} → \n{self.tool_value}")
             self.info.setPosition((self.initial_x, y))
 
