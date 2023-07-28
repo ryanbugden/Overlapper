@@ -330,11 +330,15 @@ kbd {
 
 <h1 id="toc_0">Overlapper</h1>
 
-<h4 id="toc_1">Ryan Bugden – 2022.03.18, 2023.05.30</h4>
+<h4 id="toc_1">Ryan Bugden</h4>
+
+<p><em>Initially conceived and refined between 2022.03.18 and 2023.05.30.</em></p>
 
 <p>A RoboFont extension that gives you the power to add overlaps (+) and chamfers (-) to your glyph in a dynamic and high-fidelity way. The result is more editability when drawing, and more flexibility when interpolating.</p>
 
 <h2 id="toc_2">How to use Overlapper:</h2>
+
+<h3 id="toc_3">Overlapping and chamferring:</h3>
 
 <ol>
 <li>Select at least one on-curve point, preferably on a sharp corner.</li>
@@ -342,14 +346,26 @@ kbd {
 <li>Let go of <code>v</code> to commit the resulting shape.</li>
 </ol>
 
-<p><em>Note: You can change hotkey in Extensions &gt; Overlapper &gt; Settings&hellip;</em></p>
-
 <p><img src="./_images/overlapper_overlap.gif"  width="360">
 <img src="./_images/overlapper_chamfer.gif"  width="360"></p>
 
+<h3 id="toc_4">Cross-overlapping:</h3>
+
+<ol>
+<li>Select 2 or 4 on-curve points (Doesn&rsquo;t currently work on more).</li>
+<li>Hold <code>Shift + v</code>, and move the mouse right or left to make your corner into an overlap or a chamfer, respectively. The further you move your mouse, the bigger the cross-overlap. </li>
+<li>Let go of <code>v</code> (before letting go of <code>Shift</code>) to commit the resulting shape.</li>
+</ol>
+
+<p><img src="./_images/overlapper_cross_1.gif"  width="360">
+<img src="./_images/overlapper_cross_2.gif"  width="360">
+<img src="./_images/overlapper_cross_3.gif"  width="360"></p>
+
+<p><em>Note: You can change hotkey in Extensions &gt; Overlapper &gt; Settings&hellip;</em></p>
+
 <hr>
 
-<h4 id="toc_3">Known issues:</h4>
+<h4 id="toc_5">Known issues:</h4>
 
 <ul>
 <li>If your glyph has contours with start points that are off-curves, this will make the nearest on-curve the start point in the process. This is the current workaround to preventing Overlapper from crashing RoboFont.</li>
@@ -358,7 +374,7 @@ kbd {
 
 <hr>
 
-<p>Overlapper is inspired by the <a href="https://github.com/asaumierdemers/AddOverlap">Add Overlap</a> extension by Alexandre Saumier Demers.</p>
+<p>Overlapper is inspired by the <a href="https://github.com/asaumierdemers/AddOverlap">Add Overlap</a> extension by Alexandre Saumier Demers. The cross-overlap feature is inspired by Thom Janssen’s <a href="https://github.com/thomgb/RF-Extensions">Cross Overlap</a>.</p>
 
 <p>Special thanks to Frank Grießhammer, Jackson Cavanaugh, Andy Clymer, and all of the minds behind <a href="https://github.com/fonttools/fonttools">fontTools</a> (the reason the curve extrapolation is so accurate).</p>
 
