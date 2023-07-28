@@ -123,8 +123,11 @@ def close_contour_at_coords(g, list_of_two_coords):
                 if (pt.x, pt.y) in list_of_two_coords:
                     if pt.type == 'move': pt.type = 'line'
     else:
-        add_contour_to_end(g, contours[0], contours[1])
-            
+        try:
+            add_contour_to_end(g, contours[0], contours[1])
+        # Open contours, or outside corners of contour that doesn't overlap with others.
+        except IndexError:
+            pass
             
 def get_closest_two_coordinates(list_of_coordinates):
     closest_dist = 0
@@ -142,7 +145,6 @@ def average_point_pos(point_to_move, other_point_coords):
     point_to_move.y = (point_to_move.y + other_point_coords[1])/2
     
 def check_continuous(list_of_coords, tol=0.1):
-    print(list_of_coords)
     try:
         (min_x, min_y), (max_x, max_y) = min(list_of_coords), max(list_of_coords)
     except ValueError:  # Not sure why this is necessary. Catches empty lists, assumes not continuous.
@@ -344,13 +346,13 @@ class Overlapper(Subscriber):
 
                         if len(in_args) == 4:
                             in_result = splitCubicAtT(in_args[0], in_args[1], in_args[2], in_args[3], in_factor)[0]
-                            self.has_curve = True
+                            # self.has_curve = True
                         else:
                             in_result = lengthen_line(in_args[0], in_args[1], in_factor, "in")
                         
                         if len(out_args) == 4:
                             out_result = splitCubicAtT(out_args[0], out_args[1], out_args[2], out_args[3], -(out_factor-1))[1]
-                            self.has_curve = True
+                            # self.has_curve = True
                         else:
                             out_result = lengthen_line(out_args[0], out_args[1], -(out_factor-1), "out")
                                 
@@ -517,21 +519,21 @@ class Overlapper(Subscriber):
         # close_contour_at_coords(glyph, big_gap_coords)
                     
         # Remove two points if there is no curve, and the four resulting points are along the same line
-        if self.has_curve == False:
-            for pair in [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]:
-                # Check if the four-points segment runs along the same line
-                if search_continuity(glyph, pair) == True:
-                    # If so, remove the point
-                    for c in glyph:
-                        for pt in c.points:
-                            if (pt.x, pt.y) in pair:
-                                c.removePoint(pt, preserveCurve=True)
+        # if self.has_curve == False:  # Could work with curve present?
+        for pair in [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]:
+            # Check if the four-points segment runs along the same line
+            if search_continuity(glyph, pair) == True:
+                # If so, remove the point
+                for c in glyph:
+                    for pt in c.points:
+                        if (pt.x, pt.y) in pair:
+                            c.removePoint(pt, preserveCurve=True)
                     
     @timeit
     def glyphEditorDidKeyDown(self, info):
         if DEBUG == True: print("glyphEditorDidKeyDown", info)
         
-        self.has_curve = False
+        # self.has_curve = False
         
         # Check Shift modifier
         if info['deviceState']['shiftDown'] == 0:
