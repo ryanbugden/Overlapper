@@ -116,7 +116,7 @@ def close_contour_at_coords(g, list_of_two_coords):
                         contours.insert(0, pt.contour)
                     else:
                         contours.append(pt.contour)
-    print(contours)
+    if DEBUG == True: print(contours)
     # If it's the same contour, just close it.
     if len(contours) == 1:
         for contour in g:
@@ -511,7 +511,7 @@ class Overlapper(Subscriber):
             close_contour_at_coords(glyph, pair)
             close_contour_at_coords(glyph, pair)
                     
-        print("self.has_curve", self.has_curve)
+        if DEBUG == True: print("self.has_curve", self.has_curve)
         # Remove two points if there is no curve, and the four resulting points are along the same line
         for pair in pairs_to_close_or_remove:
             # Check to see if there's an off-curve in the pair first
@@ -522,8 +522,9 @@ class Overlapper(Subscriber):
                     for c in glyph:
                         for pt in c.points:
                             if (pt.x, pt.y) in pair:
-                                print("\n", (pt.x, pt.y), "removing point. Note to self: check to make sure it's not an off-curve, so there's no illegal point count!")
-                                print()
+                                if DEBUG == True:
+                                    print("\n", (pt.x, pt.y), "Removing point. Note to self: check to make sure it's not an off-curve, so there's no illegal point count!")
+                                    print()
                                 if pt.type != 'offcurve':
                                     c.removePoint(pt, preserveCurve=True)
                     
