@@ -18,11 +18,11 @@
 	<key>developer</key>
 	<string>Ryan Bugden</string>
 	<key>developerURL</key>
-	<string>ryanbugden.com</string>
+	<string>https://ryanbugden.com</string>
 	<key>html</key>
 	<true/>
 	<key>launchAtStartUp</key>
-	<integer>1</integer>
+	<true/>
 	<key>mainScript</key>
 	<string>overlapper.py</string>
 	<key>name</key>
@@ -30,10 +30,10 @@
 	<key>requiresVersionMajor</key>
 	<string>4</string>
 	<key>requiresVersionMinor</key>
-	<string>3</string>
+	<string>4b</string>
 	<key>timeStamp</key>
-	<real>1689700549</real>
+	<real>1696714645.2318468</real>
 	<key>version</key>
-	<string>1.3</string>
+	<string>2.0</string>
 </dict>
 </plist>
