@@ -116,6 +116,7 @@ def close_contour_at_coords(g, list_of_two_coords):
                         contours.insert(0, pt.contour)
                     else:
                         contours.append(pt.contour)
+    print(contours)
     # If it's the same contour, just close it.
     if len(contours) == 1:
         for contour in g:
@@ -346,13 +347,13 @@ class Overlapper(Subscriber):
 
                         if len(in_args) == 4:
                             in_result = splitCubicAtT(in_args[0], in_args[1], in_args[2], in_args[3], in_factor)[0]
-                            # self.has_curve = True
+                            self.has_curve.append(in_result)
                         else:
                             in_result = lengthen_line(in_args[0], in_args[1], in_factor, "in")
                         
                         if len(out_args) == 4:
                             out_result = splitCubicAtT(out_args[0], out_args[1], out_args[2], out_args[3], -(out_factor-1))[1]
-                            # self.has_curve = True
+                            self.has_curve.append(out_result)
                         else:
                             out_result = lengthen_line(out_args[0], out_args[1], -(out_factor-1), "out")
                                 
@@ -360,7 +361,8 @@ class Overlapper(Subscriber):
                         new_sel_hubs_out.update({key: out_result})
 
                         if DEBUG == True: print("new_sel_hubs_in", new_sel_hubs_in, "new_sel_hubs_out", new_sel_hubs_out)
-
+                        
+        self.has_curve = [item for result in self.has_curve for item in result]
         return (new_sel_hubs_in, new_sel_hubs_out)
 
 
@@ -502,38 +504,34 @@ class Overlapper(Subscriber):
                     # Add coordinates of points you're about to remove to a list of associated points.
                     point_pairs.append([(pt.x, pt.y) for pt in c.points])
                     glyph.removeContour(c)
-        
+
         # Close the gaps the opposite way.
-        close_contour_at_coords(glyph, [point_pairs[0][1], point_pairs[1][0]])
-        close_contour_at_coords(glyph, [point_pairs[0][0], point_pairs[1][1]])
-    
-        # # Close the gaps       
-        # # Smallest gap first
-        # print("LIST OF COORDS", list_of_point_coords)
-        # coords_to_join = get_closest_two_coordinates(list_of_point_coords)
-        # print("small, closing contour at", coords_to_join)
-        # close_contour_at_coords(glyph, coords_to_join)
-        # # Big gap second
-        # big_gap_coords = [coord for coord in list_of_point_coords if coord not in coords_to_join]
-        # print("big, closing contour at", big_gap_coords)
-        # close_contour_at_coords(glyph, big_gap_coords)
+        pairs_to_close_or_remove = [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]
+        for pair in pairs_to_close_or_remove:
+            close_contour_at_coords(glyph, pair)
+            close_contour_at_coords(glyph, pair)
                     
+        print("self.has_curve", self.has_curve)
         # Remove two points if there is no curve, and the four resulting points are along the same line
-        # if self.has_curve == False:  # Could work with curve present?
-        for pair in [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]:
-            # Check if the four-points segment runs along the same line
-            if search_continuity(glyph, pair) == True:
-                # If so, remove the point
-                for c in glyph:
-                    for pt in c.points:
-                        if (pt.x, pt.y) in pair:
-                            c.removePoint(pt, preserveCurve=True)
+        for pair in pairs_to_close_or_remove:
+            # Check to see if there's an off-curve in the pair first
+            if not (pt.x, pt.y) in self.has_curve:
+                # Check if the four-points segment runs along the same line
+                if search_continuity(glyph, pair) == True:
+                    # If so, remove the point
+                    for c in glyph:
+                        for pt in c.points:
+                            if (pt.x, pt.y) in pair:
+                                print("\n", (pt.x, pt.y), "removing point. Note to self: check to make sure it's not an off-curve, so there's no illegal point count!")
+                                print()
+                                if pt.type != 'offcurve':
+                                    c.removePoint(pt, preserveCurve=True)
                     
     @timeit
     def glyphEditorDidKeyDown(self, info):
         if DEBUG == True: print("glyphEditorDidKeyDown", info)
         
-        # self.has_curve = False
+        self.has_curve = []
         
         # Check Shift modifier
         if info['deviceState']['shiftDown'] == 0:
