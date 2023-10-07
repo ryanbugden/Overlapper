@@ -83,6 +83,14 @@ if os.path.exists(os.path.join(doc_path, "index.html")):
 elif os.path.exists(os.path.join(doc_path, "index.md")):
     has_docs = True
     shutil.copy(os.path.join(doc_path, "index.md"), os.path.join(base_path, "README.md"))
+    base_images_path = os.path.join(base_path, "_images")
+    doc_images_path = os.path.join(doc_path, "_images")
+    for item in os.listdir(doc_images_path):
+        shutil.copy(os.path.join(doc_images_path, item), os.path.join(base_images_path, item))
+    # Remove from base folder if not in the source folder.
+    for item in os.listdir(base_images_path):
+        if item not in os.listdir(doc_images_path):
+            os.remove(os.path.join(base_images_path, item))
 if not has_docs:
     doc_path = None
 B.html = has_docs
