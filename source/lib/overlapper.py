@@ -209,6 +209,7 @@ class Overlapper(Subscriber):
         self.ready_to_go = False
         self.mod_active = False
         self.g = None
+        self.cross_success = False
 
         self.hotkey = get_setting_from_defaults('hotkey')
         self.snap  = getDefault("glyphViewRoundValues")  # Expensing up top to add performance, but if snapping value is changed mid-session, RF will need restart for this to take effect on Overlapper
@@ -360,9 +361,10 @@ class Overlapper(Subscriber):
                         new_sel_hubs_in.update({key: in_result})
                         new_sel_hubs_out.update({key: out_result})
 
-                        if DEBUG == True: print("new_sel_hubs_in", new_sel_hubs_in, "new_sel_hubs_out", new_sel_hubs_out)
-                        
-        self.has_curve = [item for result in self.has_curve for item in result]
+        # self.has_curve = [item for result in self.has_curve for item in result]
+        if DEBUG == True: 
+            print(self.has_curve)
+            print("new_sel_hubs_in", new_sel_hubs_in, "new_sel_hubs_out", new_sel_hubs_out)
         return (new_sel_hubs_in, new_sel_hubs_out)
 
 
@@ -390,12 +392,10 @@ class Overlapper(Subscriber):
         in_result, out_result = self.get_selection_data(self.tool_value)
 
         self.hold_g = RGlyph()
+        pen = self.hold_g.getPointPen()
         for c in self.sel_contours:
-            self.hold_g.appendContour(c)
-        # self.hold_g = self.g.copy()
-        # # Remove components for this preview. They're added back on mouse-up.
-        # self.hold_g.clearComponents()
-        
+            c.drawPoints(pen)
+            
         for c in self.hold_g:
             hits = 0  # How many points you've gone through in the loop that are selected. this will bump up the index # assigned to newly created segments
             for i, seg in enumerate(c.segments):
@@ -470,18 +470,17 @@ class Overlapper(Subscriber):
     def overlap_it(self):
         with self.g.undo("Overlap"):
             try:
-                # self.g.clear(image=False)
                 for c in self.sel_contours:
                     self.g.removeContour(c)
+                if self.snap != 0:
+                    for c in self.hold_g.contours:
+                        for pt in c.points:
+                            pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
                 self.g.appendGlyph(self.hold_g)
                 # Restore components
                 for comp in self.stored_components:
                     self.g.appendComponent(component=comp)
-                if self.snap != 0:
-                    for c in self.g.contours:
-                        for pt in c.points:
-                            pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
-                    self.g.changed()
+                self.g.changed()
             except:
                 pass
     
@@ -490,7 +489,7 @@ class Overlapper(Subscriber):
         for c in glyph.contours:
             for pt in c.points:
                 if (pt.x, pt.y) in list_of_point_coords:
-                    if DEBUG == True: print("breaking contour at", pt)
+                    if DEBUG == True: print("Breaking contour at", pt)
                     c.breakContour(pt)
                 
         # Remove the short segments
@@ -505,16 +504,20 @@ class Overlapper(Subscriber):
                         remove = False
                 # Remove the short segment contour if both points’ coordinates are in the list of coordinates.
                 if remove == True:
-                    if DEBUG == True: print("removing contour", c)
+                    if DEBUG == True: print("Removing contour", c)
                     # Add coordinates of points you're about to remove to a list of associated points.
                     point_pairs.append([(pt.x, pt.y) for pt in c.points])
                     glyph.removeContour(c)
 
         # Close the gaps the opposite way.
-        pairs_to_close_or_remove = [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]
-        for pair in pairs_to_close_or_remove:
-            close_contour_at_coords(glyph, pair)
-            close_contour_at_coords(glyph, pair)
+        if len(point_pairs) == 2:
+            pairs_to_close_or_remove = [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]
+            for pair in pairs_to_close_or_remove:
+                close_contour_at_coords(glyph, pair)
+                close_contour_at_coords(glyph, pair)
+        else:
+            # This is not ideal.
+            pairs_to_close_or_remove = [[point_pairs[0][0], point_pairs[0][1]]]
                     
         if DEBUG == True: print("self.has_curve", self.has_curve)
         # Remove two points if there is no curve, and the four resulting points are along the same line
@@ -532,6 +535,7 @@ class Overlapper(Subscriber):
                                     print()
                                 if pt.type != 'offcurve':
                                     c.removePoint(pt, preserveCurve=True)
+        self.cross_success = True
                     
     @timeit
     def glyphEditorDidKeyDown(self, info):
@@ -542,6 +546,7 @@ class Overlapper(Subscriber):
         # Check Shift modifier
         if info['deviceState']['shiftDown'] == 0:
             self.shift_down = False
+            self.cross_success = False
         else:
             self.shift_down = True
 
@@ -597,7 +602,7 @@ class Overlapper(Subscriber):
         
         char = info['deviceState']['keyDownWithoutModifiers']
         if char.lower() == self.hotkey and self.mod_active == False:
-            self.key_down = False  # Don't need this
+            self.key_down = False  # Don't need this?
 
             if self.ready_to_go == True:
                 self.overlap_it()
@@ -641,7 +646,7 @@ class Overlapper(Subscriber):
             self.description = 'Overlapping'
             if self.tool_value < 0:
                 self.description = 'Chamfering'
-            if self.shift_down:
+            if self.shift_down and self.cross_success:
                 self.description = 'Cross-overlapping'
             self.info.setText(f" ← {self.description} → \n{self.tool_value}")
             self.info.setPosition((self.initial_x, y))
