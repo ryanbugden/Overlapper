@@ -389,9 +389,12 @@ class Overlapper(Subscriber):
     def get_overlapped_glyph(self):
         in_result, out_result = self.get_selection_data(self.tool_value)
 
-        self.hold_g = self.g.copy()
-        # Remove components for this preview. They're added back on mouse-up.
-        self.hold_g.clearComponents()
+        self.hold_g = RGlyph()
+        for c in self.sel_contours:
+            self.hold_g.appendContour(c)
+        # self.hold_g = self.g.copy()
+        # # Remove components for this preview. They're added back on mouse-up.
+        # self.hold_g.clearComponents()
         
         for c in self.hold_g:
             hits = 0  # How many points you've gone through in the loop that are selected. this will bump up the index # assigned to newly created segments
@@ -467,7 +470,9 @@ class Overlapper(Subscriber):
     def overlap_it(self):
         with self.g.undo("Overlap"):
             try:
-                self.g.clear(image=False)
+                # self.g.clear(image=False)
+                for c in self.sel_contours:
+                    self.g.removeContour(c)
                 self.g.appendGlyph(self.hold_g)
                 # Restore components
                 for comp in self.stored_components:
@@ -544,6 +549,7 @@ class Overlapper(Subscriber):
         self.hotkey = get_setting_from_defaults('hotkey')
         if char.lower() == self.hotkey and self.mod_active == False:
             self.g = CurrentGlyph()
+            self.sel_contours = self.g.selectedContours
 
             if self.g.selectedPoints:
                 self.ready_to_go = True
@@ -554,7 +560,7 @@ class Overlapper(Subscriber):
             # Before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
             if self.allow_redraw == True:    
 
-                for contour in self.g.contours:
+                for contour in self.sel_contours:
                     first_point = contour.points[0]
                     first_bPoint = contour.bPoints[0]
                     first_point_coords = (first_point.x, first_point.y)
