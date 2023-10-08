@@ -535,7 +535,6 @@ class Overlapper(Subscriber):
         pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[1]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[0]]['out']]]
         
         # Remove the short segments
-        point_pairs = []
         for c in glyph.contours:
             remove = True
             if len(c.points) == 2:
@@ -548,26 +547,14 @@ class Overlapper(Subscriber):
                 if remove == True:
                     if DEBUG == True: print("Removing contour", c)
                     # Add coordinates of points you're about to remove to a list of associated points.
-                    point_pairs.append([(pt.x, pt.y) for pt in c.points])
                     glyph.removeContour(c)
         
-        
         # Close the gaps the opposite way.
-        if len(point_pairs) == 2:
-            # pairs_to_close_or_remove = [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]
-            pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[1]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[0]]['out']]]
-            for pair in pairs_to_close_or_remove:
-                close_contour_at_coords(glyph, pair)
-                close_contour_at_coords(glyph, pair)
-        else:
-            return
-            # This is not ideal.
-            pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[0]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[1]]['out']]]
-            for pair in pairs_to_close_or_remove:
-                close_contour_at_coords(glyph, pair)
-                close_contour_at_coords(glyph, pair)
-            print("Overlapper Error.")
-                    
+        for pair in pairs_to_close_or_remove:
+            close_contour_at_coords(glyph, pair)
+            close_contour_at_coords(glyph, pair)
+            
+                                
         if DEBUG == True: print("self.has_curve", self.has_curve)
         # Remove two points if there is no curve, and the four resulting points are along the same line
         for pair in pairs_to_close_or_remove:
