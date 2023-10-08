@@ -155,10 +155,10 @@ def get_closest_two_coords(list_of_coordinates):
     return closest_coords
     
 def get_furthest_two_coords(selected_contours, list_of_coordinates):
-    # Based on indexes, and keeping in the same contours
+    # Based on indexes
+    furthest_coords = []
     for c in selected_contours:
         furthest_index_diff = 0
-        furthest_coords = []
         coord_candidate = ()
         index = None
         for pt in c.points:
@@ -166,12 +166,15 @@ def get_furthest_two_coords(selected_contours, list_of_coordinates):
                 if index == None: 
                     index = pt.index
                     furthest_coords.append((pt.x, pt.y))
+                    if len(furthest_coords) == 2:
+                        return furthest_coords
                 else:
-                    furthest_index_diff = pt.index - index
-                    coord_candidate = (pt.x, pt.y)
-        furthest_coords.append(coord_candidate)
-        if len(furthest_coords) == 2:
-            return furthest_coords
+                    if abs(pt.index - index) > furthest_index_diff:
+                        furthest_index_diff = abs(pt.index - index)
+                        coord_candidate = (pt.x, pt.y)
+    furthest_coords.append(coord_candidate)
+    if len(furthest_coords) == 2:
+        return furthest_coords
                 
 def average_point_pos(point_to_move, other_point_coords):
     point_to_move.x = (point_to_move.x + other_point_coords[0])/2
