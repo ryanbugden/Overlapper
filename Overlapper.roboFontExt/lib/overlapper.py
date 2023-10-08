@@ -90,10 +90,10 @@ def break_dict_into_pairs(selected_contours, dictionary):
             #     for closest in two_closest:
             #         coords.remove(closest)
             # else:
-            two_furthest = (get_furthest_two_coords(selected_contours, coords))
-            coord_pairs.append(tuple(two_furthest))
-            for furthest in two_furthest:
-                coords.remove(furthest)
+            two_noncontiguous = (get_noncontiguous_near_coords(selected_contours, coords))
+            coord_pairs.append(tuple(two_noncontiguous))
+            for noncontig_coord in two_noncontiguous:
+                coords.remove(noncontig_coord)
         # Rebuild mini pair dictionaries
         pair_dicts = []
         for pair in coord_pairs:
@@ -154,27 +154,22 @@ def get_closest_two_coords(list_of_coordinates):
                 closest_coords = [coord, coord_2]
     return closest_coords
     
-def get_furthest_two_coords(selected_contours, list_of_coordinates):
+def get_noncontiguous_near_coords(selected_contours, list_of_coordinates):
     # Based on indexes
-    furthest_coords = []
+    coord_pair = []
+    coord_candidates = []
+    index = None
     for c in selected_contours:
-        furthest_index_diff = 0
-        coord_candidate = ()
-        index = None
         for pt in c.points:
             if (pt.x, pt.y) in list_of_coordinates:
                 if index == None: 
                     index = pt.index
-                    furthest_coords.append((pt.x, pt.y))
-                    if len(furthest_coords) == 2:
-                        return furthest_coords
+                    coord_pair.append((pt.x, pt.y))
                 else:
-                    if abs(pt.index - index) > furthest_index_diff:
-                        furthest_index_diff = abs(pt.index - index)
-                        coord_candidate = (pt.x, pt.y)
-    furthest_coords.append(coord_candidate)
-    if len(furthest_coords) == 2:
-        return furthest_coords
+                    if abs(pt.index - index) > 1:
+                        coord_candidates.append((pt.x, pt.y))
+    coord_pair = get_closest_two_coords(coord_pair + coord_candidates)
+    return coord_pair
                 
 def average_point_pos(point_to_move, other_point_coords):
     point_to_move.x = (point_to_move.x + other_point_coords[0])/2
