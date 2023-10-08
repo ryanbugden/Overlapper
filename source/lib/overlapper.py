@@ -68,37 +68,32 @@ def average_coordinates(list_of_coords):
     av_y = sum([y for (x, y) in list_of_coords]) / len(list_of_coords)
     return(av_x, av_y)
 
-## Only works for breaking in half
-# def break_dict_into_pairs(dictionary):
-#     # {(330, 182): {'in': (330.0, 147.0), 'out': (366.1276616472181, 193.89243222779146)}, (330, 105): {'in': (363.1511889198448, 116.10432225447869), 'out': (330.0, 140.0)}}
-#     if len(dictionary.keys()) == 4:
-#         test_dict = dictionary
-#         min_key = min(list(dictionary.keys()))
-#         max_key = max(list(dictionary.keys()))
-#         min_dict = {min_key: dictionary[min_key]}
-#         max_dict = {max_key: dictionary[max_key]}
-#         for key in [min_key, max_key]:
-#             test_dict.pop(key)
-#         test_keys = list(test_dict.keys())
-#         if get_vector_distance(test_keys[0], min_key) < get_vector_distance(test_keys[1], min_key):
-#             min_dict[test_keys[0]] = dictionary[test_keys[0]]
-#             max_dict[test_keys[1]] = dictionary[test_keys[1]]
-#         elif get_vector_distance(test_keys[1], min_key) < get_vector_distance(test_keys[0], min_key):
-#             min_dict[test_keys[1]] = dictionary[test_keys[1]]
-#             max_dict[test_keys[0]] = dictionary[test_keys[0]]
-#         return min_dict, max_dict
-#     else:
-#         return dictionary
-        
-def break_dict_into_pairs(dictionary):
-    if len(dictionary.keys()) >= 4:
+def break_dict_into_pairs(selected_contours, dictionary):
+    if len(dictionary.keys()) % 2 == 0 and len(dictionary.keys()) >= 2:
         coords = list(dictionary.keys())
         coord_pairs = []
         while len(coords) > 1:
-            two_closest = (get_closest_two_coordinates(coords))
-            coord_pairs.append(tuple(two_closest))
-            for closest in two_closest:
-                coords.remove(closest)
+            # two_closest = (get_closest_two_coords(coords))
+            # # Check to make sure their indexes aren't contiguous
+            # index = None
+            # contiguous = False
+            # for closest in two_closest:
+            #     for c in selected_contours:
+            #         for pt in c.points:
+            #             if (pt.x, pt.y) == closest:
+            #                 if index == None:
+            #                     index = pt.index
+            #                 elif abs(pt.index - index) == 1:
+            #                     contiguous = True
+            # if contiguous == False:
+            #     coord_pairs.append(tuple(two_closest))
+            #     for closest in two_closest:
+            #         coords.remove(closest)
+            # else:
+            two_furthest = (get_furthest_two_coords(selected_contours, coords))
+            coord_pairs.append(tuple(two_furthest))
+            for furthest in two_furthest:
+                coords.remove(furthest)
         # Rebuild mini pair dictionaries
         pair_dicts = []
         for pair in coord_pairs:
@@ -106,9 +101,8 @@ def break_dict_into_pairs(dictionary):
             pair_dicts.append(new_dict)
         return pair_dicts
     else:
-        return dictionary
+        return [dictionary]
         
-    
 def add_contour_to_end(g, contour_a, contour_b):
     '''Adds one contour to another'''
     deleted = False
@@ -149,7 +143,7 @@ def close_contour_at_coords(g, list_of_two_coords):
         except IndexError:
             pass
             
-def get_closest_two_coordinates(list_of_coordinates):
+def get_closest_two_coords(list_of_coordinates):
     closest_dist = 0
     closest_coords = []
     for coord in list_of_coordinates:
@@ -160,6 +154,25 @@ def get_closest_two_coordinates(list_of_coordinates):
                 closest_coords = [coord, coord_2]
     return closest_coords
     
+def get_furthest_two_coords(selected_contours, list_of_coordinates):
+    # Based on indexes, and keeping in the same contours
+    for c in selected_contours:
+        furthest_index_diff = 0
+        furthest_coords = []
+        coord_candidate = ()
+        index = None
+        for pt in c.points:
+            if (pt.x, pt.y) in list_of_coordinates:
+                if index == None: 
+                    index = pt.index
+                    furthest_coords.append((pt.x, pt.y))
+                else:
+                    furthest_index_diff = pt.index - index
+                    coord_candidate = (pt.x, pt.y)
+        furthest_coords.append(coord_candidate)
+        if len(furthest_coords) == 2:
+            return furthest_coords
+                
 def average_point_pos(point_to_move, other_point_coords):
     point_to_move.x = (point_to_move.x + other_point_coords[0])/2
     point_to_move.y = (point_to_move.y + other_point_coords[1])/2
@@ -469,25 +482,6 @@ class Overlapper(Subscriber):
         
         # Cross-Overlap feature
         # Make a list of all of the coordinates of the resulting overlapped points.
-        
-
-        print("in_result", in_result)
-        print("out_result", out_result)
-        print()
-        # print("resulting_coords", resulting_coords)
-        # resulting_coords_dict = {}
-        # for in_key, in_value in in_result.items():
-        #     resulting_coords_dict[in_key] = []   
-        #     for item in in_value:
-        #         resulting_coords_dict[in_key].append(item)
-        # for out_key, out_value in out_result.items():
-        #     for item in out_value:
-        #         resulting_coords_dict[out_key].append(item)
-                
-        # print()
-        # print(resulting_coords_dict)
-        # print()
-        # Only do this if 2 or 4 points are selected
         sel_points_amount = len(in_result.keys())
         if self.shift_down:
             base_and_results = {}
@@ -499,10 +493,8 @@ class Overlapper(Subscriber):
                 val_out = out_result[key][0]
                 if not val_out == key:
                     base_and_results[key]['out'] = val_out
-            if sel_points_amount == 2:
-                self.convert_overlaps_to_cross_overlap(self.hold_g, base_and_results)
-            elif sel_points_amount % 2 == 0 and sel_points_amount >= 4:
-                for b_and_r_pair in break_dict_into_pairs(base_and_results):
+            if sel_points_amount % 2 == 0:
+                for b_and_r_pair in break_dict_into_pairs(self.sel_contours, base_and_results):
                     self.convert_overlaps_to_cross_overlap(self.hold_g, b_and_r_pair)
             
         return self.hold_g
@@ -538,7 +530,10 @@ class Overlapper(Subscriber):
                 if (pt.x, pt.y) in all_points:
                     if DEBUG == True: print("Breaking contour at", pt)
                     c.breakContour(pt)
-                
+                    
+        dict_keys = list(dpd.keys())   
+        pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[1]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[0]]['out']]]
+        
         # Remove the short segments
         point_pairs = []
         for c in glyph.contours:
@@ -555,19 +550,23 @@ class Overlapper(Subscriber):
                     # Add coordinates of points you're about to remove to a list of associated points.
                     point_pairs.append([(pt.x, pt.y) for pt in c.points])
                     glyph.removeContour(c)
-
+        
+        
         # Close the gaps the opposite way.
         if len(point_pairs) == 2:
             # pairs_to_close_or_remove = [[point_pairs[0][1], point_pairs[1][0]], [point_pairs[0][0], point_pairs[1][1]]]
-            dict_keys = list(dpd.keys())
             pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[1]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[0]]['out']]]
             for pair in pairs_to_close_or_remove:
                 close_contour_at_coords(glyph, pair)
                 close_contour_at_coords(glyph, pair)
         else:
-            pairs_to_close_or_remove = []
+            return
             # This is not ideal.
-            print("WHOA HERE!")
+            pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[0]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[1]]['out']]]
+            for pair in pairs_to_close_or_remove:
+                close_contour_at_coords(glyph, pair)
+                close_contour_at_coords(glyph, pair)
+            print("Overlapper Error.")
                     
         if DEBUG == True: print("self.has_curve", self.has_curve)
         # Remove two points if there is no curve, and the four resulting points are along the same line
