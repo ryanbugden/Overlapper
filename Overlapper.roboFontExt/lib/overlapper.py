@@ -72,33 +72,30 @@ def break_dict_into_pairs(selected_contours, dictionary):
     if len(dictionary.keys()) % 2 == 0 and len(dictionary.keys()) >= 2:
         coords = list(dictionary.keys())
         coord_pairs = []
-        while len(coords) > 1:
-            # two_closest = (get_closest_two_coords(coords))
-            # # Check to make sure their indexes aren't contiguous
-            # index = None
-            # contiguous = False
-            # for closest in two_closest:
-            #     for c in selected_contours:
-            #         for pt in c.points:
-            #             if (pt.x, pt.y) == closest:
-            #                 if index == None:
-            #                     index = pt.index
-            #                 elif abs(pt.index - index) == 1:
-            #                     contiguous = True
-            # if contiguous == False:
-            #     coord_pairs.append(tuple(two_closest))
-            #     for closest in two_closest:
-            #         coords.remove(closest)
-            # else:
-            two_noncontiguous = (get_noncontiguous_near_coords(selected_contours, coords))
-            coord_pairs.append(tuple(two_noncontiguous))
-            for noncontig_coord in two_noncontiguous:
-                coords.remove(noncontig_coord)
+        for i in range(50):
+            # print("coords", coords)
+            two_noncontiguous = get_noncontiguous_near_coords(selected_contours, coords)
+            # print("two_noncontiguous", two_noncontiguous)
+            if two_noncontiguous not in coord_pairs:
+                coord_pairs.append(two_noncontiguous)
+                
+                for noncontig_coord in tuple(two_noncontiguous):
+                    # print()
+                    # print("assessing whether", noncontig_coord, "is in", coords)
+                    if noncontig_coord in coords:    
+                        # print("removing", noncontig_coord)
+                        # print()
+                        coords.remove(noncontig_coord)
+                    else:
+                        print("Overlapper Error: (coord_pairs)", coord_pairs)
+        # print("(coord_pairs)", coord_pairs)
         # Rebuild mini pair dictionaries
         pair_dicts = []
         for pair in coord_pairs:
-            new_dict = {pair[0]: dictionary[pair[0]], pair[1]: dictionary[pair[1]]}
-            pair_dicts.append(new_dict)
+            # print("len(pair)", len(pair))
+            if len(pair) == 2:
+                new_dict = {pair[0]: dictionary[pair[0]], pair[1]: dictionary[pair[1]]}
+                pair_dicts.append(new_dict)
         return pair_dicts
     else:
         return [dictionary]
@@ -149,26 +146,39 @@ def get_closest_two_coords(list_of_coordinates):
     for coord in list_of_coordinates:
         for coord_2 in list_of_coordinates:
             dist = get_vector_distance(coord, coord_2)
-            if (dist != 0 and dist < closest_dist) or closest_dist == 0:
+            if dist != 0 and (dist < closest_dist or closest_dist == 0):
                 closest_dist = dist
                 closest_coords = [coord, coord_2]
     return closest_coords
     
 def get_noncontiguous_near_coords(selected_contours, list_of_coordinates):
     # Based on indexes
+    # print("list_of_coordinates", list_of_coordinates)
+    if len(list_of_coordinates) <= 2:
+        return tuple(list_of_coordinates)
     coord_pair = []
     coord_candidates = []
     index = None
+    base_contour = None
     for c in selected_contours:
         for pt in c.points:
             if (pt.x, pt.y) in list_of_coordinates:
                 if index == None: 
-                    index = pt.index
+                    # print("step 1", (pt.x, pt.y))
+                    if (pt.x, pt.y) in coord_pair:
+                        # print("continuing")
+                        continue
                     coord_pair.append((pt.x, pt.y))
+                    index = pt.index
+                    base_contour = pt.contour
                 else:
+                    # print("step 2", (pt.x, pt.y))
+                    if pt.contour != base_contour:
+                        coord_candidates.append((pt.x, pt.y))
                     if abs(pt.index - index) > 1:
                         coord_candidates.append((pt.x, pt.y))
-    coord_pair = get_closest_two_coords(coord_pair + coord_candidates)
+    # print("coord_candidates", coord_candidates)
+    coord_pair = tuple(get_closest_two_coords(coord_pair + coord_candidates))
     return coord_pair
                 
 def average_point_pos(point_to_move, other_point_coords):
@@ -530,6 +540,7 @@ class Overlapper(Subscriber):
                     c.breakContour(pt)
                     
         dict_keys = list(dpd.keys())   
+        # print("dpd", dpd)
         pairs_to_close_or_remove = [[dpd[dict_keys[0]]['in'], dpd[dict_keys[1]]['out']], [dpd[dict_keys[1]]['in'], dpd[dict_keys[0]]['out']]]
         
         # Remove the short segments
