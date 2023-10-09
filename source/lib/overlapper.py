@@ -640,13 +640,7 @@ class Overlapper(Subscriber):
     def glyphEditorDidKeyUp(self, info):
         if DEBUG == True: print("glyphEditorDidKeyUp", info)
         self.g = info['glyph']
-        
-        # Check Shift modifier
-        if info['deviceState']['shiftDown'] == 0:
-            self.shift_down = False
-        else:
-            self.shift_down = True
-        
+
         char = info['deviceState']['keyDownWithoutModifiers']
         if char.lower() == self.hotkey and self.mod_active == False:
             self.key_down = False  # Don't need this?
@@ -667,12 +661,18 @@ class Overlapper(Subscriber):
     def glyphEditorDidChangeModifiers(self, info):
         ds = info['deviceState']
         mods = [ds['optionDown'], ds['controlDown'], ds['commandDown']]  # ds['shiftDown'], 
-        self.mod_active = False
+        self.mod_active = False        
         for value in mods:
             if value > 0:
                 self.mod_active = True
                 break
-
+        
+        # Check Shift modifier
+        if info['deviceState']['shiftDown'] == 0:
+            self.shift_down = False
+        else:
+            self.shift_down = True
+            
 
     glyphEditorDidMouseMoveDelay = 0
     def glyphEditorDidMouseMove(self, info):
