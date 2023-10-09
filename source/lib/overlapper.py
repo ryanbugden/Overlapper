@@ -512,12 +512,12 @@ class Overlapper(Subscriber):
     def overlap_it(self):
         with self.g.undo("Overlap"):
             try:
-                for c in self.sel_contours:
-                    self.g.removeContour(c)
                 if self.snap != 0:
                     for c in self.hold_g.contours:
                         for pt in c.points:
                             pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
+                for c in self.sel_contours:
+                    self.g.removeContour(c)
                 for c in self.hold_g.contours:
                     new_c = self.g.appendContour(c)
                 # Restore components
@@ -610,7 +610,7 @@ class Overlapper(Subscriber):
 
             # Before we start, make sure the starting point is not an off-curve (that creates issues with segment insertion [illegal point counts])
             if self.allow_redraw == True:    
-
+                changed = False
                 for contour in self.sel_contours:
                     first_point = contour.points[0]
                     first_bPoint = contour.bPoints[0]
@@ -621,8 +621,9 @@ class Overlapper(Subscriber):
                             f'{self.g.name}, ({self.g.font.info.styleName})'
                         )
                         self.start_with_oncurve(contour)  # Simple alternative to redrawing glyph
-
-                self.g.changed()
+                        changed = True
+                if changed:
+                    self.g.changed()
 
                 # Only do this once at the beginning 
                 self.allow_redraw  = False
