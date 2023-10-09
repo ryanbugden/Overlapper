@@ -1,10 +1,11 @@
 import AppKit
 from fontTools.misc.bezierTools import splitCubicAtT, approximateCubicArcLength
 from fontTools.ufoLib.pointPen import PointToSegmentPen  # for Frank’s code setting start points to on-curves
-from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber
+from mojo.subscriber import Subscriber, registerGlyphEditorSubscriber, getRegisteredSubscriberEvents, registerSubscriberEvent
 from mojo.extensions import getExtensionDefault
 from mojo.roboFont import version
 from mojo.UI import CurrentWindow, getDefault
+from mojo.events import postEvent
 from math import sqrt, atan
 import merz
 import time
@@ -421,6 +422,8 @@ class Overlapper(Subscriber):
 
         glyph_path = outline.getRepresentation("merz.CGPath")
         self.stroked_preview.setPath(glyph_path)
+        
+        postEvent(f"{EXTENSION_KEY}.overlapperDidDraw", overlapGlyph=outline, strokeColor=self.color)
 
         
     @timeit
@@ -654,6 +657,8 @@ class Overlapper(Subscriber):
             
             self.info.setVisible(False)
             self.stroked_preview.setVisible(False)
+            
+            postEvent(f"{EXTENSION_KEY}.overlapperDidStopDrawing")
 
             self.ready_for_init = True
             self.allow_redraw  = True
@@ -718,6 +723,28 @@ class Overlapper(Subscriber):
 # ======================================================================================
         
 
-if __name__ == "__main__":    
+if __name__ == '__main__':
+    # Register a subscriber event for Overlapper updating a drawing
+    event_name = f"{EXTENSION_KEY}.overlapperDidDraw"
+    if event_name not in getRegisteredSubscriberEvents():
+        registerSubscriberEvent(
+            subscriberEventName=event_name,
+            methodName="overlapperDidDraw",
+            lowLevelEventNames=[event_name],
+            dispatcher="roboFont",
+            documentation="Sent when Overlapper has updated the current overlapped glyph drawing.",
+            delay=None
+        )
+    # Register a subscriber event for Overlapper stopping drawing
+    event_name = f"{EXTENSION_KEY}.overlapperDidStopDrawing"
+    if event_name not in getRegisteredSubscriberEvents():
+        registerSubscriberEvent(
+            subscriberEventName=event_name,
+            methodName="overlapperDidStopDrawing",
+            lowLevelEventNames=[event_name],
+            dispatcher="roboFont",
+            documentation="Sent when Overlapper has stopped drawing.",
+            delay=None
+        )
     registerGlyphEditorSubscriber(Overlapper)
 
