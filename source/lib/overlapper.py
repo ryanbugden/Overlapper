@@ -516,15 +516,22 @@ class Overlapper(Subscriber):
                     for c in self.hold_g.contours:
                         for pt in c.points:
                             pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
+                indices = []
                 for c in self.sel_contours:
+                    indices.append(c.index)
                     self.g.removeContour(c)
-                for c in self.hold_g.contours:
+                print(indices)
+                for i, c in enumerate(self.hold_g.contours):
                     new_c = self.g.appendContour(c)
+                    if i < len(indices):
+                        with self.g.holdChanges():
+                            new_c.index = indices[i] + 1
                 # Restore components
                 for comp in self.stored_components:
                     self.g.appendComponent(component=comp)
                 self.g.changed()
             except:
+                print("Overlapper Error. Reference: Overlap Commit")
                 pass
     
     def convert_overlaps_to_cross_overlap(self, glyph, dpd):
