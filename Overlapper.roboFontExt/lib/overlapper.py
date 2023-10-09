@@ -72,7 +72,7 @@ def break_dict_into_pairs(selected_contours, dictionary):
     if len(dictionary.keys()) % 2 == 0 and len(dictionary.keys()) >= 2:
         coords = list(dictionary.keys())
         coord_pairs = []
-        for i in range(50):
+        while len(coords) > 1:
             # print("coords", coords)
             two_noncontiguous = get_noncontiguous_near_coords(selected_contours, coords)
             # print("two_noncontiguous", two_noncontiguous)
@@ -518,7 +518,8 @@ class Overlapper(Subscriber):
                     for c in self.hold_g.contours:
                         for pt in c.points:
                             pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
-                self.g.appendGlyph(self.hold_g)
+                for c in self.hold_g.contours:
+                    new_c = self.g.appendContour(c)
                 # Restore components
                 for comp in self.stored_components:
                     self.g.appendComponent(component=comp)
