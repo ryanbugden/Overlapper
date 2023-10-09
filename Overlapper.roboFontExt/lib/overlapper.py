@@ -525,6 +525,7 @@ class Overlapper(Subscriber):
                     self.g.appendComponent(component=comp)
                 self.g.changed()
             except:
+                print("Overlapper Error. Reference: Overlap Commit")
                 pass
     
     def convert_overlaps_to_cross_overlap(self, glyph, dpd):
