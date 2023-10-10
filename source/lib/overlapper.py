@@ -519,16 +519,35 @@ class Overlapper(Subscriber):
                     for c in self.hold_g.contours:
                         for pt in c.points:
                             pt.x, pt.y = my_round(pt.x, self.snap), my_round(pt.y,  self.snap)
-                for c in self.sel_contours:
-                    self.g.removeContour(c)
-                for c in self.hold_g.contours:
-                    new_c = self.g.appendContour(c)
+                            
+                with self.g.holdChanges():
+                    compile_g = RGlyph()
+                    excess_contours = len(self.hold_g) - len(self.sel_contours)
+                    hold_g_index = 0
+                    for contour in self.g.contours:
+                        if not contour in self.sel_contours:
+                            contours_to_add = [contour]
+                        else:
+                            contour = self.hold_g[hold_g_index]
+                            contours_to_add = [contour] 
+                            hold_g_index += 1
+                            if excess_contours > 0:
+                                contour = self.hold_g[hold_g_index]
+                                contours_to_add.append(contour)  
+                                hold_g_index += 1
+                                excess_contours -= 1 
+                        for c in contours_to_add:
+                            compile_g.appendContour(c)
+                
+                    self.g.clearContours()
+                    self.g.appendGlyph(compile_g)            
+                            
                 # Restore components
                 for comp in self.stored_components:
                     self.g.appendComponent(component=comp)
                 self.g.changed()
-            except:
-                print("Overlapper Error. Reference: Overlap Commit")
+            except Exception as error:
+                print(f"Overlapper Error. Reference: Overlap Commit\n{error}")
                 pass
     
     def convert_overlaps_to_cross_overlap(self, glyph, dpd):
