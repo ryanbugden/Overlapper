@@ -528,14 +528,19 @@ class Overlapper(Subscriber):
                         if not contour in self.sel_contours:
                             contours_to_add = [contour]
                         else:
-                            contour = self.hold_g[hold_g_index]
-                            contours_to_add = [contour] 
-                            hold_g_index += 1
-                            if excess_contours > 0:
+                            if excess_contours >= 0:
                                 contour = self.hold_g[hold_g_index]
-                                contours_to_add.append(contour)  
+                                contours_to_add = [contour] 
                                 hold_g_index += 1
-                                excess_contours -= 1 
+                                if excess_contours > 0:
+                                    contour = self.hold_g[hold_g_index]
+                                    contours_to_add.append(contour)  
+                                    hold_g_index += 1
+                                    excess_contours -= 1 
+                            # Negative excess contours are caused by Overlapper making two into one.
+                            else:
+                                contours_to_add = []
+                                excess_contours += 1
                         for c in contours_to_add:
                             compile_g.appendContour(c)
                 
