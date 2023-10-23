@@ -9,7 +9,7 @@ from mojo.events import postEvent
 from math import sqrt, atan
 import merz
 import time
-if version > "4.4":
+if version >= "4.4":
     from mojo.UI import appearanceColorKey
 
 
@@ -532,7 +532,7 @@ class Overlapper(Subscriber):
                                 contour = self.hold_g[hold_g_index]
                                 contours_to_add = [contour] 
                                 hold_g_index += 1
-                                if excess_contours > 0:
+                                while excess_contours > 0:
                                     contour = self.hold_g[hold_g_index]
                                     contours_to_add.append(contour)  
                                     hold_g_index += 1
@@ -730,12 +730,13 @@ class Overlapper(Subscriber):
 
 
     # Change the UI colors if the app switches to dark mode.
+    roboFontAppearanceChangedDelay = 1
     def roboFontAppearanceChanged(self, info):
         self.set_colors()
 
 
     def set_colors(self):
-        if version > "4.4":
+        if version >= "4.4":
             # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
             self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
         else:

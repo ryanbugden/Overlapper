@@ -6,7 +6,7 @@ name                = "Overlapper"
 version             = "2.0"
 developer           = "Ryan Bugden"
 developer_url       = "https://ryanbugden.com"
-rf_version          = "4.4b"
+rf_version          = "4.4"
 pyc_only            = False
 menu_items          = [
                         dict(
