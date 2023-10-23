@@ -28,9 +28,9 @@ A RoboFont extension that gives you the power to add overlaps (+) and chamfers (
 
 ---    
 
-#### Known issues:
+#### Notes:
 - If your glyph has contours with start points that are off-curves, this will make the nearest on-curve the start point in the process. This is the current workaround to preventing Overlapper from crashing RoboFont.
-- Speed...
+- In cross-overlap mode, when selecting more than 2 points, Overlapper does its best to pair them up. If it's not doing what you want it to do, try to do it on one pair at a time.
  
 ---
 Overlapper is inspired by the [Add Overlap](https://github.com/asaumierdemers/AddOverlap) extension by Alexandre Saumier Demers. The cross-overlap feature is inspired by Thom Janssen’s [Cross Overlap](https://github.com/thomgb/RF-Extensions).
