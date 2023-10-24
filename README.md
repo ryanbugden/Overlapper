@@ -15,7 +15,7 @@ A RoboFont extension that gives you the power to add overlaps (+) and chamfers (
 <img src="./_images/overlapper_chamfer.gif"  width="360">
 
 ### Cross-overlapping:
-1. Select 2 or 4 on-curve points (Doesn't currently work on more).
+1. Select an even number of on-curve points.
 2. Hold `Shift + v`, and move the mouse right or left to make your corner into an overlap or a chamfer, respectively. The further you move your mouse, the bigger the cross-overlap. 
 3. Let go of `v` (before letting go of `Shift`) to commit the resulting shape.
 
