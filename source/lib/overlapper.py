@@ -261,11 +261,23 @@ class Overlapper(Subscriber):
             location="foreground", 
             clear=True
             )
+            
+        self.pv_container = self.glyph_editor.extensionContainer(
+            identifier="Overlapper.preview", 
+            location="preview", 
+            clear=True
+            )
 
         self.stroked_preview = self.bg_container.appendPathSublayer(
             strokeColor=(0,0,0,0),
             fillColor=(0,0,0,0),
             strokeWidth=1
+            )
+            
+        self.preview_preview = self.pv_container.appendPathSublayer(
+            strokeColor=None,
+            fillColor=(0,0,0,1),
+            strokeWidth=0
             )
         
         self.info = self.bg_container.appendTextLineSublayer(
@@ -422,6 +434,7 @@ class Overlapper(Subscriber):
 
         glyph_path = outline.getRepresentation("merz.CGPath")
         self.stroked_preview.setPath(glyph_path)
+        self.preview_preview.setPath(glyph_path)
         
         postEvent(f"{EXTENSION_KEY}.overlapperDidDraw", overlapGlyph=outline, strokeColor=self.color)
 
@@ -661,6 +674,7 @@ class Overlapper(Subscriber):
 
             self.draw_overlap_preview()
             self.stroked_preview.setVisible(True)
+            self.preview_preview.setVisible(True)
 
             self.key_down = True
 
@@ -681,6 +695,7 @@ class Overlapper(Subscriber):
             
             self.info.setVisible(False)
             self.stroked_preview.setVisible(False)
+            self.preview_preview.setVisible(False)
             
             postEvent(f"{EXTENSION_KEY}.overlapperDidStopDrawing")
 
@@ -739,9 +754,12 @@ class Overlapper(Subscriber):
         if version >= "4.4":
             # Update, if you're in dark mode or not. This may be expensive—may want to perform in build().
             self.color = getDefault(appearanceColorKey('glyphViewStrokeColor'))
+            self.preview_color = getDefault(appearanceColorKey('glyphViewPreviewFillColor'))
         else:
             self.color = getDefault('glyphViewStrokeColor')
+            self.preview_color = getDefault('glyphViewPreviewFillColor')
         self.stroked_preview.setStrokeColor(self.color)
+        self.preview_preview.setFillColor(self.preview_color)
         self.info.setFillColor(self.color)
             
 
