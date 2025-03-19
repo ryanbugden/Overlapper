@@ -657,10 +657,7 @@ class Overlapper(Subscriber):
                     first_bPoint = contour.bPoints[0]
                     first_point_coords = (first_point.x, first_point.y)
                     if first_point_coords != first_bPoint.anchor:
-                        print(
-                            'Fixing off-curve start point in '
-                            f'{self.g.name}, ({self.g.font.info.styleName})'
-                        )
+                        # Fixing off-curve start point
                         self.start_with_oncurve(contour)  # Simple alternative to redrawing glyph
                         changed = True
                 if changed:
