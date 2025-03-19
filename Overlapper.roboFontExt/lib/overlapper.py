@@ -560,9 +560,9 @@ class Overlapper(Subscriber):
                     self.g.clearContours()
                     self.g.appendGlyph(compile_g)            
                             
-                # Restore components
-                for comp in self.stored_components:
-                    self.g.appendComponent(component=comp)
+                # # Restore components
+                # for comp in self.stored_components:
+                #     self.g.appendComponent(component=comp)
                 self.g.changed()
             except Exception as error:
                 print(f"Overlapper Error. Reference: Overlap Commit\n{error}")
