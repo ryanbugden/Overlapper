@@ -56,6 +56,8 @@ def get_vector_distance(pt1, pt2):
     return abs(dist)
 
 def my_round(x, base=1):
+    if base == 0:
+        return x
     return base * round(x/base)
         
 def contour_has_points(contour, point_coordinates):

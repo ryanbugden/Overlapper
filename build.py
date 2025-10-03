@@ -3,7 +3,7 @@
 # -----------------
 
 name                = "Overlapper"
-version             = "2.1.1"
+version             = "2.1.2"
 developer           = "Ryan Bugden"
 developer_url       = "https://ryanbugden.com"
 rf_version          = "4.4"
