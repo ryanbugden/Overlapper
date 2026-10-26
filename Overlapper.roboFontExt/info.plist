@@ -5,12 +5,10 @@
 	<key>addToMenu</key>
 	<array>
 		<dict>
-			<key>nestInSubmenus</key>
-			<true/>
 			<key>path</key>
 			<string>settings.py</string>
 			<key>preferredName</key>
-			<string>Settings...</string>
+			<string>Settings…</string>
 			<key>shortKey</key>
 			<string></string>
 		</dict>
@@ -18,7 +16,7 @@
 	<key>developer</key>
 	<string>Ryan Bugden</string>
 	<key>developerURL</key>
-	<string>https://ryanbugden.com</string>
+	<string>http://ryanbugden.com</string>
 	<key>html</key>
 	<true/>
 	<key>launchAtStartUp</key>
@@ -32,8 +30,8 @@
 	<key>requiresVersionMinor</key>
 	<string>4</string>
 	<key>timeStamp</key>
-	<real>1759523344.5934238</real>
+	<real>1793056514.9946141</real>
 	<key>version</key>
-	<string>2.1.2</string>
+	<string>2.1.3</string>
 </dict>
 </plist>

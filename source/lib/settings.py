@@ -1,10 +1,10 @@
 import ezui
 from mojo.extensions import getExtensionDefault, setExtensionDefault
 
-EXTENSION_KEY = 'com.ryanbugden.overlapper.settings'
+EXTENSION_KEY = "com.ryanbugden.overlapper.settings"
+
 
 class Overlapper(ezui.WindowController):
-
     def build(self):
         content = """
         * TwoColumnForm                     @form
@@ -27,22 +27,22 @@ class Overlapper(ezui.WindowController):
             ),
             applyButton=dict(
                 keyEquivalent=chr(13),
-            )
+            ),
         )
         self.w = ezui.EZWindow(
             title="Settings",
             content=content,
             descriptionData=descriptionData,
             controller=self,
-            footer = footer,
-            size="auto"
+            footer=footer,
+            size="auto",
         )
 
     def started(self):
         self.w.open()
         prefs = getExtensionDefault(EXTENSION_KEY, fallback=self.w.getItemValues())
         self.w.setItemValues(prefs)
-        
+
     def hotkeyCallback(self, sender):
         hotkey = sender.get()
         if len(hotkey) > 1:
@@ -51,11 +51,12 @@ class Overlapper(ezui.WindowController):
 
     def applyButtonCallback(self, sender):
         self.register_defaults()
-        self.w.close()        
+        self.w.close()
 
     def register_defaults(self):
         setExtensionDefault(EXTENSION_KEY, self.w.getItemValues(), validate=True)
         # Print a readout of the user’s updated Overlapper settings
-        print("\nOverlapper settings:\n", getExtensionDefault(EXTENSION_KEY))  
+        print("\nOverlapper settings:\n", getExtensionDefault(EXTENSION_KEY))
+
 
 Overlapper()

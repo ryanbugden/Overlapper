@@ -1,0 +1,14 @@
+name: Overlapper
+developer: Ryan Bugden
+developerURL: http://ryanbugden.com
+launchAtStartUp: true
+mainScript: overlapper.py
+version: 2.1.3
+addToMenu:
+- path: settings.py
+  preferredName: Settings…
+  shortKey: ""
+html: true
+timeStamp: 1793055717
+requiresVersionMajor: '4'
+requiresVersionMinor: '4'
